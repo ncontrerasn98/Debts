@@ -49,8 +49,6 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
-    volumes:
-    - kafka-data:/var/lib/kafka/data
 
   rabbitmq:
     image: rabbitmq:3-management
