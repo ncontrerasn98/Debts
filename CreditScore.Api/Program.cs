@@ -26,4 +26,10 @@ var app = builder.Build();
 
 app.MapCreditScoreEndpoints();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CreditScoreDbContext>();
+    db.Database.Migrate();
+}
+
 app.Run();

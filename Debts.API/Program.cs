@@ -289,4 +289,10 @@ app.MapControllers();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<CorrelationMiddleware>();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 app.Run();
