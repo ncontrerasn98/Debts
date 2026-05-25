@@ -47,6 +47,23 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+    volumes:
+    - kafka-data:/var/lib/kafka/data
+
+  kafka-init:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+        cub kafka-ready -b kafka:9092 1 20 &&
+        kafka-topics --create
+        --if-not-exists
+        --topic debt-settled
+        --bootstrap-server kafka:9092
+        --partitions 1
+        --replication-factor 1
+      "
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -132,3 +149,4 @@ services:
 volumes:
   mysql_data:
   rabbitmq_data:
+  kafka-data:
