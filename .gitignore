@@ -6,8 +6,6 @@
 ## has more thorough IDE-specific entries.
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
-appsettings.Development.json
-
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -59,3 +57,7 @@ nunit-*.xml
 
 docker-data/
 *.db
+
+CreditScore.Api/appsettings.Development.json
+CreditScore.Api/appsettings.Development.json
+Debts.API/appsettings.Development.json

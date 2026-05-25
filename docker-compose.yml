@@ -100,15 +100,25 @@ services:
     ports:
       - "5235:8080"
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=debtdb;Uid=root;Pwd=root;"
-      Kafka__BootstrapServers: "kafka:19092"
-      RabbitMq__Host: "rabbitmq"
-      Redis__ConnectionString: "redis:6379"
-      Auth__Pepper: "tu-pepper-aqui"
-      Email__Host: "mailhog"
-      Email__Port: "1025"
-      CreditScore__BaseUrl: "http://credit-score-api:8080"
-      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      ConnectionStrings__Default: server=mysql;port=3306;database=debtdb;user=root;password=root
+      AllowedHosts: "*"
+      Redis__ConnectionString: redis:6379
+      Kafka__BootstrapServers: kafka:9092
+      Jwt__Key: super-secret-key-with-many-characters
+      Jwt__Issuer: DebtsAPI
+      Jwt__Audience: DebtsAPI
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      Auth__Pepper: un-secreto-largo-y-random-que-solo-vive-en-config
+      Email__Host: mailhog
+      Email__Port: 1025
+      Email__From: noreply@debts.com
+      CreditScore__BaseUrl: http://credit-score-api:5017
+      
     depends_on:
       - mysql
       - kafka
