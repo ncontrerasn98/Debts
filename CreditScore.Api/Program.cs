@@ -1,11 +1,13 @@
 using CreditScore.Api.Consumers;
 using CreditScore.Api.Data;
 using CreditScore.Api.Endpoints;
+using CreditScore.Api.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
 
 Log.Logger = new LoggerConfiguration()

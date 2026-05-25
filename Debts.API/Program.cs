@@ -24,6 +24,7 @@ using Debts.Infrastructure.CreditScore;
 using Debts.Infrastructure.Logging;
 using Debts.Infrastructure.Persistence.Auth;
 using Debts.Infrastructure.Persistence.Email;
+using Debts.Infrastructure.Persistence.Messaging;
 using Debts.Infrastructure.Persistence.Messaging.Consumers;
 using Debts.Infrastructure.Persistence.Messaging.Producer;
 using Debts.Infrastructure.Persistence.Repositories;
@@ -75,6 +76,7 @@ builder.Services.AddSingleton<IEventProducer, KafkaProducer>();
 builder.Services.AddScoped<IMessageBus, MessageBus>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 
+builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
 builder.Services.AddHostedService<OutboxProcessorJob>();
 
