@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: debt_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: debtdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    container_name: debts-redis
+    ports:
+      - "6379:6379"
+
+  kafka:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.2
+    container_name: debts-kafka
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:19092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://kafka:19092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"
+      - "19092:19092"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: debts-kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+          - rabbitmq_data:/var/lib/rabbitmq
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686" # UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    environment:
+          COLLECTOR_OTLP_ENABLED: "true"
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # UI web
+  
+  credit-score-api:
+    build:
+      context: .
+      dockerfile: CreditScore.Api/Dockerfile
+    container_name: credit-score-api
+    ports:
+      - "5017:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=creditscoredb;Uid=root;Pwd=root;"
+      Kafka__BootstrapServers: "kafka:19092"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    depends_on:
+      - mysql
+      - kafka
+          
+volumes:
+  mysql_data:
+  rabbitmq_data:
