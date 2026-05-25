@@ -58,7 +58,7 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
-          - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -70,18 +70,18 @@ services:
     container_name: jaeger
     restart: unless-stopped
     ports:
-      - "16686:16686" # UI
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
     environment:
-          COLLECTOR_OTLP_ENABLED: "true"
+      COLLECTOR_OTLP_ENABLED: "true"
 
   mailhog:
     image: mailhog/mailhog
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # UI web
-  
+      - "1025:1025"
+      - "8025:8025"
+
   credit-score-api:
     build:
       context: .
@@ -108,10 +108,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       Logging__LogLevel__Default: Information
       Logging__LogLevel__Microsoft.AspNetCore: Warning
-      ConnectionStrings__Default: server=mysql;port=3306;database=debtdb;user=root;password=root
+      ConnectionStrings__Default: "server=mysql;port=3306;database=debtdb;user=root;password=root"
       AllowedHosts: "*"
-      Redis__ConnectionString: redis:6379
-      Kafka__BootstrapServers: kafka:19092
+      Redis__ConnectionString: "redis:6379"
+      Kafka__BootstrapServers: "kafka:19092"
       Jwt__Key: super-secret-key-with-many-characters
       Jwt__Issuer: DebtsAPI
       Jwt__Audience: DebtsAPI
@@ -122,9 +122,8 @@ services:
       Email__Host: mailhog
       Email__Port: 1025
       Email__From: noreply@debts.com
-      CreditScore__BaseUrl: http://credit-score-api:5017
-      OpenTelemetry__Endpoint: http://jaeger:4317
-      
+      CreditScore__BaseUrl: "http://credit-score-api:8080"
+      OpenTelemetry__Endpoint: "http://jaeger:4317"
     depends_on:
       mysql:
         condition: service_started
@@ -132,11 +131,15 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
-      - redis
-      - jaeger
-      - mailhog
-      - credit-score-api
-          
+      redis:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      mailhog:
+        condition: service_started
+      credit-score-api:
+        condition: service_started
+
 volumes:
   mysql_data:
   rabbitmq_data:
