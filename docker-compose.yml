@@ -59,6 +59,11 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
           - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -121,9 +126,12 @@ services:
       OpenTelemetry__Endpoint: http://jaeger:4317
       
     depends_on:
-      - mysql
-      - kafka
-      - rabbitmq
+      mysql:
+        condition: service_started
+      kafka:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
       - redis
       - jaeger
       - mailhog
