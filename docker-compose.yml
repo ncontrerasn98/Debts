@@ -118,6 +118,7 @@ services:
       Email__Port: 1025
       Email__From: noreply@debts.com
       CreditScore__BaseUrl: http://credit-score-api:5017
+      OpenTelemetry__Endpoint: http://jaeger:4317
       
     depends_on:
       - mysql

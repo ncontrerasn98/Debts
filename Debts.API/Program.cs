@@ -142,8 +142,7 @@ builder.Services
             .AddSource("KafkaConsumer.DebtSettled")
             .AddOtlpExporter(options =>
             {
-                options.Endpoint =
-                    new Uri("http://localhost:4317");
+                options.Endpoint = new Uri(builder.Configuration["OpenTelemetry:Endpoint"]!);
             });
     });
 

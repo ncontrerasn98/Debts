@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -19,16 +20,17 @@ public class DebtSettledConsumer : BackgroundService
 {
     private static readonly ActivitySource _activitySource = new("KafkaConsumer.DebtSettled");
     private static readonly TextMapPropagator _propagator = Propagators.DefaultTextMapPropagator;
-
     private readonly ILogger<DebtSettledConsumer> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConfiguration _configuration;
 
     public DebtSettledConsumer(
         ILogger<DebtSettledConsumer> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory, IConfiguration configuration)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _configuration = configuration;
     }
 
     protected override async Task<Task<Task>> ExecuteAsync(CancellationToken stoppingToken)
@@ -37,7 +39,7 @@ public class DebtSettledConsumer : BackgroundService
         {
             var config = new ConsumerConfig
             {
-                BootstrapServers = "localhost:9092",
+                BootstrapServers = _configuration["Kafka:BootstrapServers"],
                 GroupId = "debts-consumer-group",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = true,
