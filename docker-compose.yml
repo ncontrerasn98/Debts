@@ -91,6 +91,32 @@ services:
     depends_on:
       - mysql
       - kafka
+
+  debts-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: debts-api
+    ports:
+      - "5235:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=debtdb;Uid=root;Pwd=root;"
+      Kafka__BootstrapServers: "kafka:19092"
+      RabbitMq__Host: "rabbitmq"
+      Redis__ConnectionString: "redis:6379"
+      Auth__Pepper: "tu-pepper-aqui"
+      Email__Host: "mailhog"
+      Email__Port: "1025"
+      CreditScore__BaseUrl: "http://credit-score-api:8080"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    depends_on:
+      - mysql
+      - kafka
+      - rabbitmq
+      - redis
+      - jaeger
+      - mailhog
+      - credit-score-api
           
 volumes:
   mysql_data:
