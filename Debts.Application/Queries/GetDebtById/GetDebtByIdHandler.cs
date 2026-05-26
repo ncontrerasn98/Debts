@@ -1,13 +1,15 @@
 using System.Text.Json;
 using Debts.Application.Abstractions.Persistence;
 using Debts.Application.DTOs;
+using Debts.Application.Queries.GetDebts;
 using Debts.Domain.Exceptions;
+using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
 namespace Debts.Application.Queries.GetDebtById;
 
-public class GetDebtByIdHandler
+public class GetDebtByIdHandler : IRequestHandler<GetDebtByIdQuery, DebtDto>
 {
     private readonly IDebtRepository _repository;
     private readonly IDistributedCache _cache;
@@ -21,7 +23,7 @@ public class GetDebtByIdHandler
         _logger = logger;
     }
 
-    public async Task<DebtDto?> Handle(GetDebtByIdQuery query)
+    public async Task<DebtDto> Handle(GetDebtByIdQuery query, CancellationToken cancellationToken)
     {
         var cacheKey = $"debt:{query.Id}";
         var cachedDebt = await _cache.GetStringAsync(cacheKey);
@@ -63,4 +65,5 @@ public class GetDebtByIdHandler
         
         return debtDto;
     }
+    
 }

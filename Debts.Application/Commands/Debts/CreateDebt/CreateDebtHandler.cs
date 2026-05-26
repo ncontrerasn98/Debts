@@ -1,3 +1,5 @@
+using Debts.Application.Abstractions.Audit;
+using Debts.Application.Abstractions.Auth;
 using Debts.Application.Abstractions.CreditScore;
 using Debts.Application.Abstractions.Persistence;
 using Debts.Domain.Entities;
@@ -14,14 +16,18 @@ public class CreateDebtHandler : IRequestHandler<CreateDebtCommand, Guid>
     private readonly ICreditScoreService _creditScoreService;
     private readonly ILogger<CreateDebtHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _auditService;
+    private readonly ICurrentUserService  _currentUserService;
 
-    public CreateDebtHandler(IDebtRepository debtRepository, IUserRepository userRepository, ILogger<CreateDebtHandler> logger, IUnitOfWork unitOfWork, ICreditScoreService creditScoreService)
+    public CreateDebtHandler(IDebtRepository debtRepository, IUserRepository userRepository, ILogger<CreateDebtHandler> logger, IUnitOfWork unitOfWork, ICreditScoreService creditScoreService, IAuditService auditService, ICurrentUserService currentUserService)
     {
         _debtRepository = debtRepository;
         _userRepository = userRepository;
         _logger = logger;
         _unitOfWork = unitOfWork;
         _creditScoreService = creditScoreService;
+        _auditService = auditService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Guid> Handle(CreateDebtCommand command, CancellationToken cancellationToken)
@@ -72,6 +78,13 @@ public class CreateDebtHandler : IRequestHandler<CreateDebtCommand, Guid>
         await _debtRepository.AddAsync(debt);
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        
+        await _auditService.LogAsync(
+            action: AuditLog.Actions.Created,
+            entityName: nameof(Debt),
+            entityId: debt.Id,
+            details: $"Amount: {command.Amount}, DebtOwner: {command.UserId}, CreatedBy: {_currentUserService.UserId}",
+            cancellationToken: cancellationToken);
         
         _logger.LogInformation(
             "Creating debt for user {UserId} with amount {Amount}",

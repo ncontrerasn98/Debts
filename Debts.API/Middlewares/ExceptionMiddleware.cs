@@ -67,9 +67,9 @@ public class ExceptionMiddleware
                 HttpStatusCode.BadRequest,
                 ex.Message);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.LogError("Unhandled exception occurred");
+            _logger.LogError(ex, "Unhandled exception occurred");
             
             await HandleException(
                 context,

@@ -1,9 +1,12 @@
 using System.Reflection;
 using System.Text;
+using Debts.API.Filters;
 using Debts.API.Middlewares;
+using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.Auth;
 using Debts.Application.Abstractions.CreditScore;
 using Debts.Application.Abstractions.Email;
+using Debts.Application.Abstractions.Idempotency;
 using Debts.Application.Abstractions.Messaging;
 using Debts.Application.Abstractions.Persistence;
 using Debts.Application.Abstractions.Webhooks;
@@ -22,8 +25,10 @@ using Debts.Infrastructure;
 using Debts.Infrastructure.BackgroundJobs;
 using Debts.Infrastructure.CreditScore;
 using Debts.Infrastructure.Logging;
+using Debts.Infrastructure.Persistence.Audit;
 using Debts.Infrastructure.Persistence.Auth;
 using Debts.Infrastructure.Persistence.Email;
+using Debts.Infrastructure.Persistence.Idempotency;
 using Debts.Infrastructure.Persistence.Messaging;
 using Debts.Infrastructure.Persistence.Messaging.Consumers;
 using Debts.Infrastructure.Persistence.Messaging.Producer;
@@ -82,6 +87,9 @@ builder.Services.AddHostedService<OutboxProcessorJob>();
 
 builder.Services.AddScoped<ITokenProvider, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 builder.Services.AddHttpClient<IWebhookDispatcher, WebhookDispatcher>();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
@@ -238,6 +246,8 @@ builder.Services.AddSwaggerGen(options =>
                 Array.Empty<string>()
             }
         });
+    
+    options.OperationFilter<IdempotencyKeyOperationFilter>();
 });
 
 var loggerFactory = LoggerFactory.Create(b => b.AddSerilog());
@@ -270,6 +280,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
@@ -286,6 +297,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.UseMiddleware<IdempotencyMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<CorrelationMiddleware>();
 

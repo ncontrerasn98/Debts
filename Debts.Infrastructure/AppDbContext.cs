@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDeliveryAttempt> WebhookDeliveryAttempts => Set<WebhookDeliveryAttempt>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
