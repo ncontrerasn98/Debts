@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Debts.Application.Abstractions.Audit;
+using Debts.Application.Abstractions.Auth;
 using Debts.Application.Abstractions.Persistence;
+using Debts.Application.Commands.SettleDebt;
 using Debts.Application.Events;
 using Debts.Application.Messaging.Commands;
 using Debts.Domain.Entities;
@@ -9,7 +12,7 @@ using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
-namespace Debts.Application.Commands.SettleDebt;
+namespace Debts.Application.Commands.Debts.SettleDebt;
 
 public class SettleDebtHandler  : IRequestHandler<SettleDebtCommand, Unit>
 {
@@ -18,18 +21,22 @@ public class SettleDebtHandler  : IRequestHandler<SettleDebtCommand, Unit>
     private readonly ILogger<SettleDebtHandler> _logger;
     private readonly IOutboxMessagesRepository _outboxMessagesRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _auditService;
+    private readonly ICurrentUserService  _currentUserService;
 
     public SettleDebtHandler(
         IDebtRepository debtRepository,
         IDistributedCache cache,
         ILogger<SettleDebtHandler> logger, 
-        IOutboxMessagesRepository outboxMessagesRepository, IUnitOfWork unitOfWork)
+        IOutboxMessagesRepository outboxMessagesRepository, IUnitOfWork unitOfWork, IAuditService auditService, ICurrentUserService currentUserService)
     {
         _debtRepository = debtRepository;
         _cache = cache;
         _logger = logger;
         _outboxMessagesRepository = outboxMessagesRepository;
         _unitOfWork = unitOfWork;
+        _auditService = auditService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Unit> Handle(SettleDebtCommand command, CancellationToken cancellationToken)
@@ -88,6 +95,13 @@ public class SettleDebtHandler  : IRequestHandler<SettleDebtCommand, Unit>
         await _outboxMessagesRepository.AddAsync(outboxCommandMessage, cancellationToken);
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        
+        await _auditService.LogAsync(
+            action: AuditLog.Actions.Settled,
+            entityName: nameof(Debt),
+            entityId: debt.Id,
+            details: $"Amount: {debt.OriginalAmount}, DebtOwner: {debt.UserId}, SettledBy: {_currentUserService.UserId}",
+            cancellationToken: cancellationToken);
         
         var cacheKey = $"debt:{command.DebtId}";
 

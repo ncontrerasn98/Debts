@@ -1,5 +1,7 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Debts.API.Filters;
 using Debts.API.Middlewares;
 using Debts.Application.Abstractions.Audit;
@@ -14,6 +16,7 @@ using Debts.Application.Commands.Auth.Login;
 using Debts.Application.Commands.Auth.RefreshToken;
 using Debts.Application.Commands.CreateUser;
 using Debts.Application.Commands.Debts.CreateDebt;
+using Debts.Application.Commands.Debts.SettleDebt;
 using Debts.Application.Commands.SettleDebt;
 using Debts.Application.Commands.Users.AssignRole;
 using Debts.Application.Commands.Users.RevokeRole;
@@ -24,6 +27,7 @@ using Debts.Application.Validators;
 using Debts.Infrastructure;
 using Debts.Infrastructure.BackgroundJobs;
 using Debts.Infrastructure.CreditScore;
+using Debts.Infrastructure.HealthChecks;
 using Debts.Infrastructure.Logging;
 using Debts.Infrastructure.Persistence.Audit;
 using Debts.Infrastructure.Persistence.Auth;
@@ -35,14 +39,19 @@ using Debts.Infrastructure.Persistence.Messaging.Producer;
 using Debts.Infrastructure.Persistence.Repositories;
 using Debts.Infrastructure.Webhooks;
 using FluentValidation;
+using HealthChecks.UI.Client;
 using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Polly;
+using Prometheus;
+using RabbitMQ.Client;
 using Serilog;
 using Serilog.Enrichers.Span;
 
@@ -80,6 +89,8 @@ builder.Services.AddScoped<RevokeRoleHandler>();
 builder.Services.AddSingleton<IEventProducer, KafkaProducer>();
 builder.Services.AddScoped<IMessageBus, MessageBus>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+builder.Services.AddScoped<KafkaHealthCheck>();
 
 builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
@@ -250,6 +261,54 @@ builder.Services.AddSwaggerGen(options =>
     options.OperationFilter<IdempotencyKeyOperationFilter>();
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+
+    options.AddPolicy("mixed-per-user", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromSeconds(10),
+                PermitLimit = 3,
+                QueueLimit = 2,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+            }));
+});
+
+builder.Services.AddHealthChecks()
+    // Liveness — solo verifica que la app está viva
+    .AddCheck("live", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    
+    // Readiness — verifica dependencias
+    .AddMySql(
+        builder.Configuration["ConnectionStrings:Default"]!,
+        name: "mysql",
+        tags: new[] { "ready" })
+    .AddRedis(
+        builder.Configuration["Redis:ConnectionString"]!,
+        name: "redis",
+        tags: new[] { "ready" })
+    .AddRabbitMQ(
+        sp =>
+        {
+            var factory = new ConnectionFactory
+            {
+                HostName = builder.Configuration["RabbitMQ:Host"],
+                UserName = builder.Configuration["RabbitMQ:Username"],
+                Password = builder.Configuration["RabbitMQ:Password"]
+            };
+            return factory.CreateConnectionAsync();
+        },
+        name: "rabbitmq",
+        tags: new[] { "ready" })
+    .AddCheck<KafkaHealthCheck>(
+        "kafka",
+        tags: new[] { "ready" });
+
 var loggerFactory = LoggerFactory.Create(b => b.AddSerilog());
 var logger = loggerFactory.CreateLogger<CreditScoreService>();
 
@@ -289,7 +348,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseHttpMetrics(); 
 
+app.UseRateLimiter();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
@@ -301,10 +362,25 @@ app.UseMiddleware<IdempotencyMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<CorrelationMiddleware>();
 
+// Liveness — solo verifica que la app está viva
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+// Readiness — verifica todas las dependencias
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
+app.MapMetrics();
 
 app.Run();

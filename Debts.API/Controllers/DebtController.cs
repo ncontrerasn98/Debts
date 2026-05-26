@@ -6,11 +6,13 @@ using Debts.Application.Queries.GetDebts;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Debts.API.Controllers;
 
 [ApiController]
 [Route("debts")]
+[EnableRateLimiting("mixed-per-user")]
 public class DebtsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -58,6 +60,7 @@ public class DebtsController : ControllerBase
         return Ok(debt);
     }
     
+    [DisableRateLimiting]//quitar el rate limit 
     [HttpPatch("{id:guid}/settle")]
     public async Task<IActionResult> Settle(Guid id)
     {

@@ -1,14 +1,29 @@
 using CreditScore.Api.Consumers;
 using CreditScore.Api.Data;
 using CreditScore.Api.Endpoints;
+using CreditScore.Api.Healthchecks;
 using CreditScore.Api.Messaging;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Prometheus;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
+
+builder.Services.AddHealthChecks()
+    .AddCheck("live", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMySql(
+        builder.Configuration["ConnectionStrings:DefaultConnection"]!,
+        name: "mysql",
+        tags: new[] { "ready" })
+    .AddCheck<KafkaHealthCheck>(
+        "kafka",
+        tags: new[] { "ready" });
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(
@@ -24,12 +39,26 @@ builder.Services.AddDbContext<CreditScoreDbContext>(options =>
 
 var app = builder.Build();
 
+app.UseHttpMetrics(); 
+
 app.MapCreditScoreEndpoints();
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CreditScoreDbContext>();
     db.Database.Migrate();
 }
-
+app.MapMetrics();
 app.Run();
