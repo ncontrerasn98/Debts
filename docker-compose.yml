@@ -176,3 +176,7 @@ volumes:
   kafka_data:
   prometheus_data:
   grafana_data:
+
+networks:
+  debts-network:
+    driver: bridge
