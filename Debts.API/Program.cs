@@ -348,6 +348,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseRouting();
 app.UseHttpMetrics(); 
 
 app.UseRateLimiter();

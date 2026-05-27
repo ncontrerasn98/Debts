@@ -38,7 +38,7 @@ builder.Services.AddDbContext<CreditScoreDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 var app = builder.Build();
-
+app.UseRouting();
 app.UseHttpMetrics(); 
 
 app.MapCreditScoreEndpoints();
