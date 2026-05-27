@@ -4,7 +4,7 @@ global:
 scrape_configs:
   - job_name: debts-api
     static_configs:
-      - targets: ["debts-api:8080"]  # Mac/Windows
+      - targets: ["debts-api:8080"]
 
   - job_name: credit-score-api
     static_configs:

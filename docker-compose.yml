@@ -10,12 +10,16 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - debts-network
 
   redis:
     image: redis:7
     container_name: debts-redis
     ports:
       - "6379:6379"
+    networks:
+      - debts-network
 
   kafka:
     image: docker.redpanda.com/redpandadata/redpanda:v24.1.2
@@ -38,6 +42,8 @@ services:
       - "19092:19092"
     volumes:
       - kafka_data:/var/lib/redpanda/data
+    networks:
+      - debts-network
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -47,6 +53,8 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+    networks:
+      - debts-network
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -64,6 +72,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - debts-network
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -75,12 +85,16 @@ services:
       - "4318:4318"
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - debts-network
 
   mailhog:
     image: mailhog/mailhog
     ports:
       - "1025:1025"
       - "8025:8025"
+    networks:
+      - debts-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -91,7 +105,7 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     networks:
-    - debts-network
+      - debts-network
 
   grafana:
     image: grafana/grafana:latest
@@ -106,7 +120,7 @@ services:
     depends_on:
       - prometheus
     networks:
-    - debts-network
+      - debts-network
 
   credit-score-api:
     build:
@@ -123,7 +137,7 @@ services:
       - mysql
       - kafka
     networks:
-    - debts-network
+      - debts-network
 
   debts-api:
     build:
@@ -168,7 +182,7 @@ services:
       credit-score-api:
         condition: service_started
     networks:
-    - debts-network
+      - debts-network
 
 volumes:
   mysql_data:
