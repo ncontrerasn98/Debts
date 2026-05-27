@@ -4,8 +4,8 @@ global:
 scrape_configs:
   - job_name: debts-api
     static_configs:
-      - targets: ["host.docker.internal:5235"]  # Mac/Windows
+      - targets: ["debts-api:8080"]  # Mac/Windows
 
   - job_name: credit-score-api
     static_configs:
-      - targets: ["host.docker.internal:5017"]
+      - targets: ["credit-score-api:8080"]
