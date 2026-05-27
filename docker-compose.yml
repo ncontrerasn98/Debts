@@ -90,6 +90,8 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    networks:
+    - debts-network
 
   grafana:
     image: grafana/grafana:latest
@@ -103,6 +105,8 @@ services:
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+    networks:
+    - debts-network
 
   credit-score-api:
     build:
@@ -118,6 +122,8 @@ services:
     depends_on:
       - mysql
       - kafka
+    networks:
+    - debts-network
 
   debts-api:
     build:
@@ -161,6 +167,8 @@ services:
         condition: service_started
       credit-score-api:
         condition: service_started
+    networks:
+    - debts-network
 
 volumes:
   mysql_data:
