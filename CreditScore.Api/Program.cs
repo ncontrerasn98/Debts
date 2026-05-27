@@ -18,7 +18,7 @@ builder.Services.AddHostedService<DebtSettledConsumer>();
 builder.Services.AddHealthChecks()
     .AddCheck("live", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddMySql(
-        builder.Configuration["ConnectionStrings:DefaultConnection"]!,
+        builder.Configuration["ConnectionStrings:Default"]!,
         name: "mysql",
         tags: new[] { "ready" })
     .AddCheck<KafkaHealthCheck>(
@@ -31,8 +31,6 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<CreditScoreDbContext>(options =>
     options.UseMySql(

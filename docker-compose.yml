@@ -130,7 +130,7 @@ services:
     ports:
       - "5017:8080"
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=creditscoredb;Uid=root;Pwd=root;"
+      ConnectionStrings__Default: "Server=mysql;Port=3306;Database=creditscoredb;Uid=root;Pwd=root;"
       Kafka__BootstrapServers: "kafka:19092"
       ASPNETCORE_ENVIRONMENT: "Development"
     depends_on:
