@@ -101,6 +101,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<ITokenBlacklistService, TokenBlacklistService>();
 
 builder.Services.AddHttpClient<IWebhookDispatcher, WebhookDispatcher>();
 builder.Services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
@@ -343,45 +344,49 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
+// Migraciones al arrancar
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseRouting();
-app.UseHttpMetrics(); 
+app.UseHttpMetrics();
 
-app.UseRateLimiter();
+// Middlewares propios — orden importante
+app.UseMiddleware<ExceptionMiddleware>();        // 1. atrapa todo
+app.UseMiddleware<CorrelationMiddleware>();      // 2. agrega correlationId
+app.UseMiddleware<TokenBlacklistMiddleware>();   // 3. verifica blacklist
+
 app.UseHttpsRedirection();
+app.UseAuthentication();                         // 4. valida el JWT
+app.UseAuthorization();                          // 5. verifica permisos
 
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseRateLimiter();                            // 6. limita requests por usuario autenticado
+app.UseMiddleware<IdempotencyMiddleware>();       // 7. idempotencia para usuarios autenticados
 
 app.MapControllers();
 
-app.UseMiddleware<IdempotencyMiddleware>();
-app.UseMiddleware<ExceptionMiddleware>();
-app.UseMiddleware<CorrelationMiddleware>();
-
-// Liveness — solo verifica que la app está viva
+// Health checks y métricas
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live"),
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 
-// Readiness — verifica todas las dependencias
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready"),
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
 app.MapMetrics();
 
 app.Run();

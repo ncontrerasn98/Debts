@@ -1,8 +1,10 @@
 using Debts.API.Contracts.Requests;
 using Debts.API.Contracts.Responses;
 using Debts.Application.Commands.Auth.Login;
+using Debts.Application.Commands.Auth.Logout;
 using Debts.Application.Commands.Auth.RefreshToken;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Debts.API.Controllers;
@@ -45,5 +47,20 @@ public class AuthController : ControllerBase
         var result = await _mediator.Send(command);
 
         return Ok(result);
+    }
+    
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var token = Request.Headers.Authorization
+            .FirstOrDefault()?.Replace("Bearer ", "");
+
+        if (string.IsNullOrEmpty(token))
+            return BadRequest("No token provided");
+
+        await _mediator.Send(new LogoutCommand { Token = token });
+
+        return NoContent();
     }
 }
