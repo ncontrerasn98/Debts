@@ -1,4 +1,5 @@
-﻿using Debts.Domain.Entities;
+﻿using Debts.Application.Sagas.CreateDebt;
+using Debts.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Debts.Infrastructure;
@@ -15,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDeliveryAttempt> WebhookDeliveryAttempts => Set<WebhookDeliveryAttempt>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<DebtCreationSagaState> DebtCreationSagaStates => Set<DebtCreationSagaState>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

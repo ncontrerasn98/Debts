@@ -37,5 +37,8 @@ public class DebtRepository : IDebtRepository
         return await _context.Debts
             .FirstOrDefaultAsync(x => x.Id == id);
     }
+    
+    public void Remove(Debt debt)
+        => _context.Debts.Remove(debt);
 
 }

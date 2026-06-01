@@ -23,6 +23,9 @@ using Debts.Application.Commands.Users.RevokeRole;
 using Debts.Application.Common.Behaviors;
 using Debts.Application.Queries.GetDebtById;
 using Debts.Application.Queries.GetDebts;
+using Debts.Application.Sagas;
+using Debts.Application.Sagas.CreateDebt;
+using Debts.Application.Sagas.CreateDebt.Messages;
 using Debts.Application.Validators;
 using Debts.Infrastructure;
 using Debts.Infrastructure.BackgroundJobs;
@@ -86,6 +89,9 @@ builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<AssignRoleHandler>();
 builder.Services.AddScoped<RevokeRoleHandler>();
 
+// builder.Services.AddScoped<CreateDebtActivity>();
+// builder.Services.AddScoped<CompensateDebtCreationActivity>();
+
 builder.Services.AddSingleton<IEventProducer, KafkaProducer>();
 builder.Services.AddScoped<IMessageBus, MessageBus>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
@@ -131,6 +137,23 @@ builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<SendDebtSettledEmailConsumer>();
 
+    x.AddSagaStateMachine<DebtCreationSaga, DebtCreationSagaState>()
+        .EntityFrameworkRepository(r =>
+        {
+            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+            r.AddDbContext<DbContext, AppDbContext>((provider, options) =>
+            {
+                options.UseMySql(
+                    builder.Configuration.GetConnectionString("Default"),
+                    new MySqlServerVersion(new Version(8, 0, 0)));
+            });
+        });
+
+    // Registrar Activities
+    x.AddActivities(typeof(CreateDebtActivity).Assembly);
+
+    x.AddRequestClient<CreateDebtRequested>();
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(
@@ -140,7 +163,7 @@ builder.Services.AddMassTransit(x =>
                 h.Username(builder.Configuration["RabbitMQ:Username"]);
                 h.Password(builder.Configuration["RabbitMQ:Password"]);
             });
-        
+
         cfg.UseInMemoryOutbox();
         cfg.ConfigureEndpoints(context);
     });

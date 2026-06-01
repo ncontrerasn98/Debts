@@ -8,4 +8,5 @@ public interface IDebtRepository
     Task<List<Debt>> GetAllAsync();
     Task<Debt?> GetByIdAsync(Guid id);
     Task<Debt?> GetTrackedByIdAsync(Guid id);
+    void Remove(Debt debt);
 }
