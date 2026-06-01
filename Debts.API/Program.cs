@@ -95,6 +95,7 @@ builder.Services.AddScoped<KafkaHealthCheck>();
 builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
 builder.Services.AddHostedService<OutboxProcessorJob>();
+builder.Services.AddHostedService<DebtSettlementReversedConsumer>();
 
 builder.Services.AddScoped<ITokenProvider, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();

@@ -25,7 +25,7 @@ public class KafkaTopicInitializer : IHostedService
                 new AdminClientConfig { BootstrapServers = _bootstrapServers })
             .Build();
 
-        var topics = new[] { "debt-settled" };
+        var topics = new[] { "debt-settled", "debt-settlement-reversed" };
 
         foreach (var topic in topics)
         {

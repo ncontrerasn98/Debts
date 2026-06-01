@@ -49,4 +49,9 @@ public class Debt
 
         IsSettled = true;
     }
+    
+    public void MarkAsUnsettled()
+    {
+        IsSettled = false;
+    }
 }

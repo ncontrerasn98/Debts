@@ -38,6 +38,7 @@ public class AuditLog
         public const string Updated = "UPDATED";
         public const string Deleted = "DELETED";
         public const string Settled = "SETTLED";
+        public const string SettlementReversed = "SETTLEMENT_REVERSED";
         public const string RoleAssigned = "ROLE_ASSIGNED";
         public const string RoleRevoked = "ROLE_REVOKED";
     }

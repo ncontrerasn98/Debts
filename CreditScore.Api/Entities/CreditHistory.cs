@@ -53,4 +53,23 @@ public class CreditHistory
         ActiveDebts++;
         UpdatedAt = DateTime.UtcNow;
     }
+    
+    public void ReverseDebtSettled(
+        decimal originalAmount,
+        decimal? negotiatedAmount)
+    {
+        SettledDebts--;
+        TotalDebts--;
+        TotalOriginalAmount -= originalAmount;
+
+        if (negotiatedAmount.HasValue)
+        {
+            TotalNegotiatedAmount -= negotiatedAmount.Value;
+
+            if (negotiatedAmount.Value < originalAmount * 0.5m)
+                LowNegotiations--;
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

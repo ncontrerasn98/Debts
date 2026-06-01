@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using CreditScore.Api.Data;
 using CreditScore.Api.Entities;
 using CreditScore.Api.Events;
+using CreditScore.Api.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace CreditScore.Api.Consumers;
@@ -12,14 +13,16 @@ public class DebtSettledConsumer : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<DebtSettledConsumer> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IKafkaProducer _kafkaProducer;
 
     public DebtSettledConsumer(
         IServiceScopeFactory scopeFactory,
-        ILogger<DebtSettledConsumer> logger, IConfiguration configuration)
+        ILogger<DebtSettledConsumer> logger, IConfiguration configuration, IKafkaProducer kafkaProducer)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _configuration = configuration;
+        _kafkaProducer = kafkaProducer;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -47,7 +50,7 @@ public class DebtSettledConsumer : BackgroundService
                     {
                         var debtSettledEvent = JsonSerializer.Deserialize<DebtSettledEvent>(
                             result.Message.Value);
-
+                        
                         using var scope = _scopeFactory.CreateScope();
                         var dbContext = scope.ServiceProvider
                             .GetRequiredService<CreditScoreDbContext>();
@@ -80,8 +83,22 @@ public class DebtSettledConsumer : BackgroundService
                     catch (Exception ex)
                     {
                         _logger.LogError(ex,
-                            "Error processing DebtSettledEvent for offset {Offset}",
+                            "Error processing DebtSettledEvent for offset {Offset} — publishing compensation",
                             result.Offset.Value);
+                        
+                        var debtSettledEvent = JsonSerializer.Deserialize<DebtSettledEvent>(
+                            result.Message.Value);
+
+                        await _kafkaProducer.PublishAsync(
+                            "debt-settlement-reversed",
+                            new DebtSettlementReversedEvent
+                            {
+                                DebtId = debtSettledEvent!.DebtId,
+                                UserId = debtSettledEvent.UserId,
+                                OriginalAmount = debtSettledEvent.OriginalAmount,
+                                NegotiatedAmount = debtSettledEvent.NegotiatedAmount,
+                                ReversedAt = DateTime.UtcNow
+                            });
                     }
                 }
             }
