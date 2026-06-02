@@ -1,3 +1,4 @@
+using Debts.API.Attributes;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -7,9 +8,12 @@ public class IdempotencyKeyOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        var method = context.ApiDescription.HttpMethod;
+        var hasIdempotent = context.MethodInfo
+            .GetCustomAttributes(true)
+            .OfType<IdempotentAttribute>()
+            .Any();
 
-        if (method is not ("POST" or "PATCH" or "PUT"))
+        if (!hasIdempotent)
             return;
 
         operation.Parameters.Add(new OpenApiParameter

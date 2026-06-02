@@ -1,3 +1,4 @@
+using Debts.API.Attributes;
 using Debts.Application.Abstractions.Idempotency;
 
 namespace Debts.API.Middlewares;
@@ -16,6 +17,18 @@ public class IdempotencyMiddleware
     public async Task InvokeAsync(HttpContext context, IIdempotencyService idempotencyService)
     {
         if (context.Request.Method is not ("POST" or "PATCH" or "PUT"))
+        {
+            await _next(context);
+            return;
+        }
+
+        // Verificar si el endpoint tiene el atributo [Idempotent]
+        var endpoint = context.GetEndpoint();
+        var hasIdempotentAttribute = endpoint?
+            .Metadata
+            .GetMetadata<IdempotentAttribute>() is not null;
+
+        if (!hasIdempotentAttribute)
         {
             await _next(context);
             return;

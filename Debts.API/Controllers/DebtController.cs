@@ -1,3 +1,4 @@
+using Debts.API.Attributes;
 using Debts.API.Contracts.Requests;
 using Debts.Application.Abstractions.Auth;
 using Debts.Application.Commands.Debts.CreateDebt;
@@ -47,6 +48,7 @@ public class DebtsController : ControllerBase
     
     [HttpPost]
     [AllowAnonymous]
+    [Idempotent]
     public async Task<IActionResult> Create(CreateDebtRequest request)
     {
         var correlationId = Guid.NewGuid();
@@ -89,6 +91,7 @@ public class DebtsController : ControllerBase
         return Ok(debt);
     }
     
+    [Idempotent]
     [DisableRateLimiting]//quitar el rate limit 
     [HttpPatch("{id:guid}/settle")]
     public async Task<IActionResult> Settle(Guid id)

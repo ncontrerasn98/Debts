@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Prometheus;
 using Serilog;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +38,12 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddStackExchangeRedis("redis:6379", options =>
+    {
+        options.Configuration.ChannelPrefix = 
+            RedisChannel.Literal("creditscore"); // prefijo para no mezclar con otros datos
+    });
 
 builder.Services.AddDbContext<CreditScoreDbContext>(options =>
     options.UseMySql(
