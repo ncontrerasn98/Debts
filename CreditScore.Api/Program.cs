@@ -3,6 +3,7 @@ using CreditScore.Api.Data;
 using CreditScore.Api.Endpoints;
 using CreditScore.Api.Healthchecks;
 using CreditScore.Api.Messaging;
+using CreditScore.Api.Services;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,8 @@ using Prometheus;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddGrpc();
 
 builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
@@ -45,6 +48,7 @@ app.UseRouting();
 app.UseHttpMetrics(); 
 
 app.MapCreditScoreEndpoints();
+app.MapGrpcService<CreditScoreGrpcService>();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {

@@ -11,6 +11,7 @@
     <PackageReference Include="AspNetCore.HealthChecks.MySql" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageReference Include="Confluent.Kafka" Version="2.14.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
@@ -27,5 +28,15 @@
       <Link>.dockerignore</Link>
     </Content>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+  <Protobuf Include="..\Shared.Contracts\Protos\creditscoreservice.proto" 
+            GrpcServices="Server" 
+            Link="Protos\creditscoreservice.proto" />
+</ItemGroup>
 
 </Project>

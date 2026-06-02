@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option csharp_namespace = "Shared.Contracts";
+
+package creditscore;
+
+service CreditScoreService {
+  rpc GetScore (GetScoreRequest) returns (GetScoreResponse);
+}
+
+message GetScoreRequest {
+  string user_id = 1;
+}
+
+message GetScoreResponse {
+  string user_id = 1;
+  int32 score = 2;
+  string rating = 3;
+  int32 settled_debts = 4;
+  int32 active_debts = 5;
+  string updated_at = 6;
+}

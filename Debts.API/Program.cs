@@ -89,9 +89,6 @@ builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<AssignRoleHandler>();
 builder.Services.AddScoped<RevokeRoleHandler>();
 
-// builder.Services.AddScoped<CreateDebtActivity>();
-// builder.Services.AddScoped<CompensateDebtCreationActivity>();
-
 builder.Services.AddSingleton<IEventProducer, KafkaProducer>();
 builder.Services.AddScoped<IMessageBus, MessageBus>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
@@ -168,6 +165,16 @@ builder.Services.AddMassTransit(x =>
         cfg.ConfigureEndpoints(context);
     });
 });
+
+builder.Services.AddGrpcClient<Shared.Contracts.CreditScoreService.CreditScoreServiceClient>(options =>
+    {
+        options.Address = new Uri(builder.Configuration["CreditScore:GrpcUrl"] ?? "http://localhost:5018");
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        // Permitir HTTP sin TLS para desarrollo
+        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+    });
 
 builder.Services
     .AddOpenTelemetry()
@@ -335,20 +342,25 @@ builder.Services.AddHealthChecks()
         tags: new[] { "ready" });
 
 var loggerFactory = LoggerFactory.Create(b => b.AddSerilog());
-var logger = loggerFactory.CreateLogger<CreditScoreService>();
-
+var logger = loggerFactory.CreateLogger<CreditScoreGrpcClient>(); 
 var combinedPolicy = Policy.WrapAsync(
     CreditScoreResiliencePolicies.GetFallbackPolicy(logger),
     CreditScoreResiliencePolicies.GetCircuitBreakerPolicy(logger),
     CreditScoreResiliencePolicies.GetRetryPolicy(logger),
     CreditScoreResiliencePolicies.GetTimeoutPolicy());
 
-builder.Services.AddHttpClient<ICreditScoreService, CreditScoreService>(client =>
+
+builder.Services.AddGrpcClient<Shared.Contracts.CreditScoreService.CreditScoreServiceClient>(options =>
     {
-        client.BaseAddress = new Uri(builder.Configuration["CreditScore:BaseUrl"]
-                                     ?? "http://localhost:5017");
+        options.Address = new Uri(builder.Configuration["CreditScore:GrpcUrl"] ?? "http://localhost:5018");
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
     })
     .AddPolicyHandler(combinedPolicy);
+
+builder.Services.AddScoped<ICreditScoreService, CreditScoreGrpcClient>();
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -368,7 +380,6 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-// Migraciones al arrancar
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -384,7 +395,6 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseHttpMetrics();
 
-// Middlewares propios — orden importante
 app.UseMiddleware<ExceptionMiddleware>();        // 1. atrapa todo
 app.UseMiddleware<CorrelationMiddleware>();      // 2. agrega correlationId
 app.UseMiddleware<TokenBlacklistMiddleware>();   // 3. verifica blacklist

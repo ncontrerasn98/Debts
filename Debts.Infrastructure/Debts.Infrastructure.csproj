@@ -2,10 +2,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Debts.Application\Debts.Application.csproj" />
+    <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
   <FrameworkReference Include="Microsoft.AspNetCore.App" />
+</ItemGroup>
+
+<ItemGroup>
+  <Protobuf Include="..\Shared.Contracts\Protos\creditscoreservice.proto" 
+            GrpcServices="Client" 
+            Link="Protos\creditscoreservice.proto" />
 </ItemGroup>
 
   <ItemGroup>
