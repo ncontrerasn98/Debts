@@ -1,7 +1,9 @@
 using Debts.Application.Abstractions.Audit;
+using Debts.Application.Abstractions.CreditScore;
 using Debts.Application.Abstractions.Persistence;
 using Debts.Application.Sagas.CreateDebt.Messages;
 using Debts.Domain.Entities;
+using Debts.Domain.Exceptions;
 using MassTransit;
 
 namespace Debts.Application.Sagas.CreateDebt;
@@ -12,17 +14,20 @@ public class CreateDebtActivity : IStateMachineActivity<DebtCreationSagaState, C
     private readonly IUserRepository _userRepository;
     private readonly IAuditService _auditService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICreditScoreService _creditScoreService;
 
     public CreateDebtActivity(
         IDebtRepository debtRepository,
         IUserRepository userRepository,
         IAuditService auditService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICreditScoreService creditScoreService)
     {
         _debtRepository = debtRepository;
         _userRepository = userRepository;
         _auditService = auditService;
         _unitOfWork = unitOfWork;
+        _creditScoreService = creditScoreService;
     }
 
     public async Task Execute(
@@ -47,12 +52,36 @@ public class CreateDebtActivity : IStateMachineActivity<DebtCreationSagaState, C
                 await next.Execute(context);
                 return;
             }
+            
+            try
+            {
+                var creditScore = await _creditScoreService.GetScoreAsync(
+                    context.Saga.UserId);
+
+                if (creditScore is not null && creditScore.Score < 700)
+                {
+                    await context.Publish(new DebtCreationFailed
+                    {
+                        CorrelationId = context.Saga.CorrelationId,
+                        Reason = $"Credit score too low — current score: {creditScore.Score} ({creditScore.Rating})"
+                    });
+                    await next.Execute(context);
+                    return;
+                }
+            }
+            catch (ServiceUnavailableException)
+            {
+                // Si el servicio está caído, permitimos la operación
+                Console.WriteLine("🟡 CreditScore service unavailable — allowing debt creation");
+            }
 
             var debt = new Debt(context.Saga.Amount, context.Saga.UserId);
             await _debtRepository.AddAsync(debt);
             await _unitOfWork.SaveChangesAsync();
+            
+            context.Saga.DebtId = debt.Id;
             Console.WriteLine($"🟢 Debt created: {debt.Id}");
-
+            
             await _auditService.LogAsync(
                 action: AuditLog.Actions.Created,
                 entityName: nameof(Debt),
