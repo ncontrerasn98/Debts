@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CreditScore SignalR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+</head>
+<body>
+<h2>Credit Score Monitor</h2>
+
+<div>
+    <label>User ID:</label>
+    <input type="text" id="userId" placeholder="ingresa el userId" style="width: 300px"/>
+    <button onclick="subscribe()">Suscribirse</button>
+</div>
+
+<div id="status" style="margin-top: 20px; color: gray;">No conectado</div>
+
+<div id="notifications" style="margin-top: 20px;"></div>
+
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("http://localhost:5017/hubs/creditscore")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.on("CreditScoreUpdated", (data) => {
+        const div = document.getElementById("notifications");
+        div.innerHTML = `
+                <div style="padding: 10px; border: 1px solid green; margin: 5px; border-radius: 5px;">
+                    <strong>Score actualizado</strong><br>
+                    Usuario: ${data.userId}<br>
+                    Score: <strong>${data.score}</strong><br>
+                    Rating: <strong>${data.rating}</strong><br>
+                    Hora: ${new Date(data.updatedAt).toLocaleTimeString()}
+                </div>
+            ` + div.innerHTML;
+    });
+
+    async function subscribe() {
+        const userId = document.getElementById("userId").value;
+        if (!userId) return alert("Ingresa un userId");
+
+        await connection.invoke("JoinUserGroup", userId);
+        document.getElementById("status").textContent =
+            `✅ Suscrito al usuario ${userId}`;
+        document.getElementById("status").style.color = "green";
+    }
+
+    connection.start()
+        .then(() => {
+            document.getElementById("status").textContent = "Conectado — ingresa un userId para suscribirte";
+            document.getElementById("status").style.color = "blue";
+        })
+        .catch(err => {
+            document.getElementById("status").textContent = `Error: ${err}`;
+            document.getElementById("status").style.color = "red";
+        });
+</script>
+</body>
+</html>
