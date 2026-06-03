@@ -39,11 +39,35 @@
             ` + div.innerHTML;
     });
 
+    connection.on("DebtSettled", (data) => {
+        const div = document.getElementById("notifications");
+        div.innerHTML = `
+        <div style="padding: 10px; border: 1px solid blue; margin: 5px; border-radius: 5px;">
+            <strong>Debt Settled</strong><br>
+            Debt: ${data.debtId}<br>
+            Amount: ${data.amount}<br>
+            SettledAt: ${new Date(data.settledAt).toLocaleTimeString()}
+        </div>
+    ` + div.innerHTML;
+    });
+
+    connection.on("DebtSettled", (data) => {
+        console.log("DebtSettled received:", data); // <-- agregar
+        const div = document.getElementById("notifications");
+        // ... resto
+    });
+
+    connection.on("CreditScoreUpdated", (data) => {
+        console.log("CreditScoreUpdated received:", data); // <-- agregar
+        // ... resto
+    });
+
     async function subscribe() {
         const userId = document.getElementById("userId").value;
         if (!userId) return alert("Ingresa un userId");
 
         await connection.invoke("JoinUserGroup", userId);
+        console.log(`Joined group user-${userId}`); // <-- agregar
         document.getElementById("status").textContent =
             `✅ Suscrito al usuario ${userId}`;
         document.getElementById("status").style.color = "green";
@@ -58,6 +82,12 @@
             document.getElementById("status").textContent = `Error: ${err}`;
             document.getElementById("status").style.color = "red";
         });
+
+    connection.onreconnected(() => {
+        console.log("Reconnected — rejoining group");
+        const userId = document.getElementById("userId").value;
+        if (userId) connection.invoke("JoinUserGroup", userId);
+    });
 </script>
 </body>
 </html>

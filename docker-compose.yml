@@ -146,6 +146,35 @@ services:
     networks:
       - debts-network
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: Notification.Service/Dockerfile
+    container_name: notification-service
+    ports:
+      - "5077:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=notificationdb;Uid=root;Pwd=root;"
+      Kafka__BootstrapServers: "kafka:19092"
+      Redis__ConnectionString: "redis:6379"
+      Email__Host: "mailhog"
+      Email__Port: "1025"
+      Email__From: "notifications@debts.com"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    depends_on:
+      mysql:
+        condition: service_started
+      kafka:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailhog:
+        condition: service_started
+    networks:
+      - debts-network
+
   debts-api:
     build:
       context: .
