@@ -14,13 +14,15 @@ public class DebtSettledConsumer : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<DebtSettledConsumer> _logger;
+    private readonly IConfiguration _configuration;
 
     public DebtSettledConsumer(
         IServiceScopeFactory scopeFactory,
-        ILogger<DebtSettledConsumer> logger)
+        ILogger<DebtSettledConsumer> logger, IConfiguration configuration)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _configuration = configuration;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,7 +31,7 @@ public class DebtSettledConsumer : BackgroundService
         {
             var config = new ConsumerConfig
             {
-                BootstrapServers = "localhost:9092",
+                BootstrapServers = _configuration["Kafka:BootstrapServers"],
                 GroupId = "notification-debt-settled-group",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = false

@@ -14,13 +14,15 @@ public class CreditScoreUpdatedConsumer : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CreditScoreUpdatedConsumer> _logger;
+    private readonly IConfiguration _configuration;
 
     public CreditScoreUpdatedConsumer(
         IServiceScopeFactory scopeFactory,
-        ILogger<CreditScoreUpdatedConsumer> logger)
+        ILogger<CreditScoreUpdatedConsumer> logger, IConfiguration configuration)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _configuration = configuration;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,7 +31,7 @@ public class CreditScoreUpdatedConsumer : BackgroundService
         {
             var config = new ConsumerConfig
             {
-                BootstrapServers = "localhost:9092",
+                BootstrapServers = _configuration["Kafka:BootstrapServers"],
                 GroupId = "notification-credit-score-group",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = false
