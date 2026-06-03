@@ -145,10 +145,14 @@ services:
       Kestrel__Endpoints__Grpc__Url: "http://0.0.0.0:5018"
       Kestrel__Endpoints__Grpc__Protocols: "Http2"
     depends_on:
-      - kafka
-      - redis
-        mysql:
+      mysql:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailhog:
+        condition: service_started
     networks:
       - debts-network
 
