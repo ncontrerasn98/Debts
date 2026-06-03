@@ -1,6 +1,11 @@
 services:
   mysql:
     image: mysql:8
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     container_name: debt_mysql
     restart: always
     environment:
@@ -140,9 +145,10 @@ services:
       Kestrel__Endpoints__Grpc__Url: "http://0.0.0.0:5018"
       Kestrel__Endpoints__Grpc__Protocols: "Http2"
     depends_on:
-      - mysql
       - kafka
       - redis
+        mysql:
+        condition: service_healthy
     networks:
       - debts-network
 
@@ -163,7 +169,7 @@ services:
       ASPNETCORE_ENVIRONMENT: "Development"
     depends_on:
       mysql:
-        condition: service_started
+        condition: service_healthy
       kafka:
         condition: service_started
       rabbitmq:

@@ -41,9 +41,12 @@ builder.Host.UseSerilog();
 builder.Services.AddDbContext<CreditScoreDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("Default"),
-        new MySqlServerVersion(new Version(8, 0, 0))
+        new MySqlServerVersion(new Version(8, 0, 0)),
+        mysqlOptions => mysqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null)
     ));
-
 
 var app = builder.Build();
 app.UseRouting();
