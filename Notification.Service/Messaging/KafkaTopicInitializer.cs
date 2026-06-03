@@ -1,7 +1,7 @@
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 
-namespace CreditScore.Api.Messaging;
+namespace Notification.Service.Messaging;
 
 public class KafkaTopicInitializer : IHostedService
 {
@@ -22,7 +22,7 @@ public class KafkaTopicInitializer : IHostedService
                 new AdminClientConfig { BootstrapServers = _bootstrapServers })
             .Build();
 
-        var topics = new[] { "debt-settled", "debt-settlement-reversed", "credit-score-updated" };
+        var topics = new[] { "debt-settled", "credit-score-updated" };
 
         foreach (var topic in topics)
         {

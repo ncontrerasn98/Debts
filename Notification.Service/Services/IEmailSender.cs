@@ -1,4 +1,4 @@
-namespace Debts.Application.Abstractions.Email;
+namespace Notification.Service.Services;
 
 public interface IEmailSender
 {

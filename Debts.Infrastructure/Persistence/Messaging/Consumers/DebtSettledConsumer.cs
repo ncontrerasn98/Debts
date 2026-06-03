@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using Debts.Application.Abstractions.Webhooks;
 using Debts.Application.DTOs;
-using Debts.Application.Events;
 using Debts.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +12,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
 
 namespace Debts.Infrastructure.Persistence.Messaging.Consumers;
 

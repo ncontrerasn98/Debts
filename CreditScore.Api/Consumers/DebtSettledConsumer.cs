@@ -2,12 +2,11 @@ using System.Text.Json;
 using Confluent.Kafka;
 using CreditScore.Api.Data;
 using CreditScore.Api.Entities;
-using CreditScore.Api.Events;
-using CreditScore.Api.Hubs;
 using CreditScore.Api.Messaging;
 using CreditScore.Api.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts.Events;
 
 namespace CreditScore.Api.Consumers;
 
@@ -17,17 +16,15 @@ public class DebtSettledConsumer : BackgroundService
     private readonly ILogger<DebtSettledConsumer> _logger;
     private readonly IConfiguration _configuration;
     private readonly IKafkaProducer _kafkaProducer;
-    private readonly IHubContext<CreditScoreHub> _hubContext;
 
     public DebtSettledConsumer(
         IServiceScopeFactory scopeFactory,
-        ILogger<DebtSettledConsumer> logger, IConfiguration configuration, IKafkaProducer kafkaProducer, IHubContext<CreditScoreHub> hubContext)
+        ILogger<DebtSettledConsumer> logger, IConfiguration configuration, IKafkaProducer kafkaProducer)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _configuration = configuration;
         _kafkaProducer = kafkaProducer;
-        _hubContext = hubContext;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -88,19 +85,16 @@ public class DebtSettledConsumer : BackgroundService
                         var score = CreditScoreCalculator.Calculate(history);
                         var rating = CreditScoreCalculator.GetRating(score);
 
-                        await _hubContext.Clients
-                            .Group($"user-{debtSettledEvent!.UserId}")
-                            .SendAsync("CreditScoreUpdated", new
+                        await _kafkaProducer.PublishAsync(
+                            "credit-score-updated",
+                            new CreditScoreUpdatedEvent
                             {
-                                UserId = debtSettledEvent.UserId,
+                                UserId = debtSettledEvent!.UserId,
                                 Score = score,
                                 Rating = rating,
+                                IsLowScore = score < 400,
                                 UpdatedAt = DateTime.UtcNow
-                            }, stoppingToken);
-
-                        _logger.LogInformation(
-                            "SignalR notification sent for user {UserId} — score {Score}",
-                            debtSettledEvent.UserId, score);
+                            });
                     }
                     catch (Exception ex)
                     {

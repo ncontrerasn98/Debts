@@ -2,7 +2,6 @@ using CreditScore.Api.Consumers;
 using CreditScore.Api.Data;
 using CreditScore.Api.Endpoints;
 using CreditScore.Api.Healthchecks;
-using CreditScore.Api.Hubs;
 using CreditScore.Api.Messaging;
 using CreditScore.Api.Services;
 using HealthChecks.UI.Client;
@@ -38,12 +37,6 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
-builder.Services.AddSignalR()
-    .AddStackExchangeRedis("redis:6379", options =>
-    {
-        options.Configuration.ChannelPrefix = 
-            RedisChannel.Literal("creditscore"); // prefijo para no mezclar con otros datos
-    });
 
 builder.Services.AddDbContext<CreditScoreDbContext>(options =>
     options.UseMySql(
@@ -51,26 +44,12 @@ builder.Services.AddDbContext<CreditScoreDbContext>(options =>
         new MySqlServerVersion(new Version(8, 0, 0))
     ));
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy
-            .SetIsOriginAllowed(_ => true) // permite cualquier origen en desarrollo
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
 
 var app = builder.Build();
 app.UseRouting();
-app.UseCors();
 app.UseHttpMetrics(); 
-app.UseStaticFiles();
 app.MapCreditScoreEndpoints();
 app.MapGrpcService<CreditScoreGrpcService>();
-app.MapHub<CreditScoreHub>("/hubs/creditscore");
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {

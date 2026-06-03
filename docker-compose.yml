@@ -129,13 +129,20 @@ services:
     container_name: credit-score-api
     ports:
       - "5017:8080"
+      - "5017:8080"   # HTTP
+      - "5018:5018"   # gRPC
     environment:
       ConnectionStrings__Default: "Server=mysql;Port=3306;Database=creditscoredb;Uid=root;Pwd=root;"
       Kafka__BootstrapServers: "kafka:19092"
       ASPNETCORE_ENVIRONMENT: "Development"
+      Redis__ConnectionString: "redis:6379"
+      Kestrel__Endpoints__Http__Url: "http://0.0.0.0:8080"
+      Kestrel__Endpoints__Grpc__Url: "http://0.0.0.0:5018"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
     depends_on:
       - mysql
       - kafka
+      - redis
     networks:
       - debts-network
 

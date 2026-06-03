@@ -1,9 +1,7 @@
-using Debts.Application.Abstractions.Email;
-using Microsoft.Extensions.Configuration;
+using MailKit.Net.Smtp;
 using MimeKit;
-using SmtpClient = MailKit.Net.Smtp.SmtpClient;
 
-namespace Debts.Infrastructure.Persistence.Email;
+namespace Notification.Service.Services;
 
 public class EmailSender : IEmailSender
 {
@@ -15,7 +13,7 @@ public class EmailSender : IEmailSender
     {
         _host = configuration["Email:Host"] ?? "localhost";
         _port = int.Parse(configuration["Email:Port"] ?? "1025");
-        _from = configuration["Email:From"] ?? "noreply@debts.com";
+        _from = configuration["Email:From"] ?? "notifications@debts.com";
     }
 
     public async Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default)

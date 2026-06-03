@@ -4,13 +4,13 @@ using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.Auth;
 using Debts.Application.Abstractions.Persistence;
 using Debts.Application.Commands.SettleDebt;
-using Debts.Application.Events;
 using Debts.Application.Messaging.Commands;
 using Debts.Domain.Entities;
 using Debts.Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
 
 namespace Debts.Application.Commands.Debts.SettleDebt;
 
@@ -81,18 +81,7 @@ public class SettleDebtHandler  : IRequestHandler<SettleDebtCommand, Unit>
             Email = "test-mail@email.com"
         };
         
-        var outboxCommandMessage = new OutboxMessage
-        {
-            Id = Guid.NewGuid(),
-            Type = nameof(SendDebtSettledEmailCommand),
-            Payload = JsonSerializer.Serialize(debtSettledSendEmailCommand),
-            OccurredOnUtc = DateTime.UtcNow,
-            CorrelationId = debt.Id.ToString(),
-            TraceParent =  traceParent
-        };
-
         await _outboxMessagesRepository.AddAsync(outboxEventMessage, cancellationToken);
-        await _outboxMessagesRepository.AddAsync(outboxCommandMessage, cancellationToken);
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         

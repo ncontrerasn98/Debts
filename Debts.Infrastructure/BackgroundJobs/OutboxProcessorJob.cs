@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Debts.Application.Abstractions.Messaging;
-using Debts.Application.Events;
 using Debts.Application.Messaging.Commands;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
 
 namespace Debts.Infrastructure.BackgroundJobs;
 

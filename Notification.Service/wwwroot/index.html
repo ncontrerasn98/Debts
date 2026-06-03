@@ -19,7 +19,10 @@
 
 <script>
     const connection = new signalR.HubConnectionBuilder()
-        .withUrl("http://localhost:5017/hubs/creditscore")
+        .withUrl("http://localhost:5077/hubs/notifications", {
+            skipNegotiation: false,
+            transport: signalR.HttpTransportType.WebSockets
+        })
         .withAutomaticReconnect()
         .build();
 

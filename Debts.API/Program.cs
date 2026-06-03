@@ -7,7 +7,6 @@ using Debts.API.Middlewares;
 using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.Auth;
 using Debts.Application.Abstractions.CreditScore;
-using Debts.Application.Abstractions.Email;
 using Debts.Application.Abstractions.Idempotency;
 using Debts.Application.Abstractions.Messaging;
 using Debts.Application.Abstractions.Persistence;
@@ -17,13 +16,11 @@ using Debts.Application.Commands.Auth.RefreshToken;
 using Debts.Application.Commands.CreateUser;
 using Debts.Application.Commands.Debts.CreateDebt;
 using Debts.Application.Commands.Debts.SettleDebt;
-using Debts.Application.Commands.SettleDebt;
 using Debts.Application.Commands.Users.AssignRole;
 using Debts.Application.Commands.Users.RevokeRole;
 using Debts.Application.Common.Behaviors;
 using Debts.Application.Queries.GetDebtById;
 using Debts.Application.Queries.GetDebts;
-using Debts.Application.Sagas;
 using Debts.Application.Sagas.CreateDebt;
 using Debts.Application.Sagas.CreateDebt.Messages;
 using Debts.Application.Validators;
@@ -34,7 +31,6 @@ using Debts.Infrastructure.HealthChecks;
 using Debts.Infrastructure.Logging;
 using Debts.Infrastructure.Persistence.Audit;
 using Debts.Infrastructure.Persistence.Auth;
-using Debts.Infrastructure.Persistence.Email;
 using Debts.Infrastructure.Persistence.Idempotency;
 using Debts.Infrastructure.Persistence.Messaging;
 using Debts.Infrastructure.Persistence.Messaging.Consumers;
@@ -91,7 +87,6 @@ builder.Services.AddScoped<RevokeRoleHandler>();
 
 builder.Services.AddSingleton<IEventProducer, KafkaProducer>();
 builder.Services.AddScoped<IMessageBus, MessageBus>();
-builder.Services.AddScoped<IEmailSender, EmailSender>();
 
 builder.Services.AddScoped<KafkaHealthCheck>();
 
@@ -132,8 +127,6 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    x.AddConsumer<SendDebtSettledEmailConsumer>();
-
     x.AddSagaStateMachine<DebtCreationSaga, DebtCreationSagaState>()
         .EntityFrameworkRepository(r =>
         {

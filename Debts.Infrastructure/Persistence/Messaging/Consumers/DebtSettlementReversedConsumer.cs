@@ -2,12 +2,12 @@ using System.Text.Json;
 using Confluent.Kafka;
 using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.Persistence;
-using Debts.Application.Events;
 using Debts.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
 
 namespace Debts.Infrastructure.Persistence.Messaging.Consumers;
 
