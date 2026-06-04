@@ -1,0 +1,99 @@
+{
+  "Routes": [
+    {
+      "UpstreamPathTemplate": "/debts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "PUT", "DELETE" ],
+      "DownstreamPathTemplate": "/debts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5235 }
+      ],
+      "SwaggerKey": "debts"
+    },
+    {
+      "UpstreamPathTemplate": "/users/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "PUT", "DELETE" ],
+      "DownstreamPathTemplate": "/users/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5235 }
+      ],
+      "SwaggerKey": "debts"
+    },
+    {
+      "UpstreamPathTemplate": "/auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "PUT", "DELETE" ],
+      "DownstreamPathTemplate": "/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5235 }
+      ],
+      "SwaggerKey": "debts"
+    },
+    {
+      "UpstreamPathTemplate": "/webhooks/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "PUT", "DELETE" ],
+      "DownstreamPathTemplate": "/webhooks/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5235 }
+      ],
+      "SwaggerKey": "debts"
+    },
+    {
+      "UpstreamPathTemplate": "/credit-score/{everything}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "DownstreamPathTemplate": "/credit-score/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5017 }
+      ],
+      "SwaggerKey": "credit-score"
+    },
+    {
+      "UpstreamPathTemplate": "/notifications/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "DownstreamPathTemplate": "/notifications/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5077 }
+      ],
+      "SwaggerKey": "notifications"
+    }
+  ],
+  "SwaggerEndPoints": [
+    {
+      "Key": "debts",
+      "Config": [
+        {
+          "Name": "Debts API",
+          "Version": "v1",
+          "Url": "http://localhost:5235/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "credit-score",
+      "Config": [
+        {
+          "Name": "CreditScore API",
+          "Version": "v1",
+          "Url": "http://localhost:5017/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "notifications",
+      "Config": [
+        {
+          "Name": "Notification Service",
+          "Version": "v1",
+          "Url": "http://localhost:5077/swagger/v1/swagger.json"
+        }
+      ]
+    }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:5100"
+  }
+}

@@ -191,6 +191,22 @@ services:
     networks:
       - debts-network
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ApiGateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "5236:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+    depends_on:
+      - debts-api
+      - credit-score-api
+      - notification-service
+    networks:
+      - debts-network
+
   debts-api:
     build:
       context: .

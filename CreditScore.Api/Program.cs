@@ -48,8 +48,25 @@ builder.Services.AddDbContext<CreditScoreDbContext>(options =>
             errorNumbersToAdd: null)
     ));
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5236") // gateway
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 app.UseRouting();
+app.UseCors();
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseHttpMetrics(); 
 app.MapCreditScoreEndpoints();
 app.MapGrpcService<CreditScoreGrpcService>();

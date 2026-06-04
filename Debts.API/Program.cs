@@ -371,6 +371,17 @@ builder.Host.UseSerilog();
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -386,6 +397,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseCors();
 app.UseHttpMetrics();
 
 app.UseMiddleware<ExceptionMiddleware>();        // 1. atrapa todo
