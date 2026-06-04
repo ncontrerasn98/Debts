@@ -199,7 +199,7 @@ services:
     ports:
       - "5236:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_ENVIRONMENT: "Production"
     depends_on:
       - debts-api
       - credit-score-api

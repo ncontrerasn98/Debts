@@ -18,4 +18,5 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 COPY ["ApiGateway/ocelot.json", "."]
+COPY ["ApiGateway/ocelot.Production.json", "."]
 ENTRYPOINT ["dotnet", "ApiGateway.dll"]
