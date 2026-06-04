@@ -48,7 +48,7 @@ public class KafkaProducer : IEventProducer
         };
         
         _propagator.Inject(
-            new PropagationContext(activity!.Context, Baggage.Current),
+            new PropagationContext(activity?.Context ?? default, Baggage.Current),
             kafkaMessage.Headers,
             (headers, key, value) =>
                 headers.Add(key, Encoding.UTF8.GetBytes(value)));

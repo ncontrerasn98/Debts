@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using CreditScore.Api.Data;
@@ -6,6 +8,8 @@ using CreditScore.Api.Messaging;
 using CreditScore.Api.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry;
+using OpenTelemetry.Context.Propagation;
 using Shared.Contracts.Events;
 
 namespace CreditScore.Api.Consumers;
@@ -16,6 +20,8 @@ public class DebtSettledConsumer : BackgroundService
     private readonly ILogger<DebtSettledConsumer> _logger;
     private readonly IConfiguration _configuration;
     private readonly IKafkaProducer _kafkaProducer;
+    private static readonly ActivitySource _activitySource = new("KafkaConsumer.DebtSettled");
+    private static readonly TextMapPropagator _propagator = Propagators.DefaultTextMapPropagator;
 
     public DebtSettledConsumer(
         IServiceScopeFactory scopeFactory,
@@ -52,6 +58,25 @@ public class DebtSettledConsumer : BackgroundService
                     {
                         var debtSettledEvent = JsonSerializer.Deserialize<DebtSettledEvent>(
                             result.Message.Value);
+
+                        // Extraer contexto de tracing de los headers del mensaje
+                        var parentContext = _propagator.Extract(
+                            default,
+                            result.Message.Headers,
+                            (headers, key) =>
+                            {
+                                var header = headers.FirstOrDefault(h => h.Key == key);
+                                return header is not null
+                                    ? new[] { Encoding.UTF8.GetString(header.GetValueBytes()) }
+                                    : Enumerable.Empty<string>();
+                            });
+
+                        Baggage.Current = parentContext.Baggage;
+
+                        using var activity = _activitySource.StartActivity(
+                            "kafka.consume debt-settled",
+                            ActivityKind.Consumer,
+                            parentContext.ActivityContext);
                         
                         using var scope = _scopeFactory.CreateScope();
                         var dbContext = scope.ServiceProvider
@@ -84,7 +109,7 @@ public class DebtSettledConsumer : BackgroundService
                         
                         var score = CreditScoreCalculator.Calculate(history);
                         var rating = CreditScoreCalculator.GetRating(score);
-
+                        
                         await _kafkaProducer.PublishAsync(
                             "credit-score-updated",
                             new CreditScoreUpdatedEvent
