@@ -19,6 +19,15 @@
       ]
     },
     {
+      "UpstreamPathTemplate": "/credit-score/ranking",
+      "UpstreamHttpMethod": [ "GET" ],
+      "DownstreamPathTemplate": "/credit-score/ranking",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5017 }
+      ]
+    },
+    {
       "UpstreamPathTemplate": "/auth/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "PUT", "DELETE" ],
       "DownstreamPathTemplate": "/auth/{everything}",

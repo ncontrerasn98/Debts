@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debts-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debts-api
+  template:
+    metadata:
+      labels:
+        app: debts-api
+    spec:
+      containers:
+        - name: debts-api
+          image: debts-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: debts-api-config
+            - secretRef:
+                name: debts-api-secret
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: debts-api
+spec:
+  selector:
+    app: debts-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP

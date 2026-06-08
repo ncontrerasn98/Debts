@@ -51,6 +51,15 @@
       "SwaggerKey": "credit-score"
     },
     {
+      "UpstreamPathTemplate": "/credit-score/ranking",
+      "UpstreamHttpMethod": [ "GET" ],
+      "DownstreamPathTemplate": "/credit-score/ranking",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5017 }
+      ]
+    },
+    {
       "UpstreamPathTemplate": "/notifications/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST" ],
       "DownstreamPathTemplate": "/notifications/{everything}",

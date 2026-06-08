@@ -2,6 +2,7 @@ using CreditScore.Api.Data;
 using CreditScore.Api.DTOs;
 using CreditScore.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace CreditScore.Api.Endpoints;
 
@@ -30,6 +31,28 @@ public static class CreditScoreEndpoints
                 ActiveDebts: history.ActiveDebts,
                 UpdatedAt: history.UpdatedAt
             ));
+        });
+        
+        // En CreditScoreEndpoints.cs
+        app.MapGet("/credit-score/ranking", async (
+            IConnectionMultiplexer redis,
+            int top = 10) =>
+        {
+            var db = redis.GetDatabase();
+
+            var ranking = await db.SortedSetRangeByRankWithScoresAsync(
+                "credit-score-ranking",
+                0, top - 1,
+                Order.Descending);
+
+            var result = ranking.Select((entry, index) => new
+            {
+                Position = index + 1,
+                UserId = entry.Element.ToString(),
+                Score = (int)entry.Score
+            });
+
+            return Results.Ok(result);
         });
     }
 }

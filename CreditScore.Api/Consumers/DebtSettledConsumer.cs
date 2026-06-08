@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 using Shared.Contracts.Events;
+using StackExchange.Redis;
 
 namespace CreditScore.Api.Consumers;
 
@@ -120,6 +121,19 @@ public class DebtSettledConsumer : BackgroundService
                                 IsLowScore = score < 400,
                                 UpdatedAt = DateTime.UtcNow
                             });
+                        
+                        // Actualizar ranking en Redis
+                        var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>();
+                        var db = redis.GetDatabase();
+                        await db.SortedSetAddAsync(
+                            "credit-score-ranking",
+                            debtSettledEvent!.UserId.ToString(),
+                            score);
+
+                        _logger.LogInformation(
+                            "Credit score ranking updated for user {UserId} — score {Score}",
+                            debtSettledEvent.UserId, score);
+
                     }
                     catch (Exception ex)
                     {
