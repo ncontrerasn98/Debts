@@ -150,6 +150,9 @@ services:
       Kestrel__Endpoints__Http__Url: "http://0.0.0.0:8080"
       Kestrel__Endpoints__Grpc__Url: "http://0.0.0.0:5018"
       Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
     depends_on:
       mysql:
         condition: service_healthy
@@ -176,6 +179,9 @@ services:
       Email__Host: "mailhog"
       Email__Port: "1025"
       Email__From: "notifications@debts.com"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
       ASPNETCORE_ENVIRONMENT: "Development"
     depends_on:
       mysql:
