@@ -23,35 +23,50 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResp
 
     public async Task<AuthResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        var storedToken = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken, cancellationToken);
+        var storedToken = await _refreshTokenRepository.GetByTokenAsync(
+            request.RefreshToken, cancellationToken);
 
-        if (storedToken is null || !storedToken.IsActive)
-        {
+        if (storedToken is null)
             throw new UnauthorizedException("Invalid refresh token");
+
+        // Token revocado o comprometido — posible reuso detectado
+        if (!storedToken.IsActive)
+        {
+            // Si el token pertenece a una familia, invalidarla completa
+            await _refreshTokenRepository.RevokeAllFamilyAsync(
+                storedToken.FamilyId, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            throw new UnauthorizedException("Refresh token reuse detected — all sessions invalidated. Please log in again.");
         }
 
-        storedToken.RevokedAt = DateTime.UtcNow;
-
+        // Revocar el token actual y vincularlo con el nuevo
         var user = await _ruserRepository.GetByIdAsync(storedToken.UserId);
         var roles = user.UserRoles.Select(ur => ur.Role.Name);
-        
+
         var newAccessToken = _tokenProvider.GenerateToken(user.Id, user.Name, roles);
         var newRefreshToken = _tokenProvider.GenerateRefreshToken();
 
+        // Revocar v_actual y registrar qué token lo reemplazó
+        storedToken.RevokedAt = DateTime.UtcNow;
+        storedToken.ReplacedByToken = newRefreshToken;
+
+        // Nuevo token hereda el FamilyId — misma familia, siguiente eslabón
         var refreshTokenEntity = new Domain.Entities.RefreshToken
         {
             Id = Guid.NewGuid(),
             Token = newRefreshToken,
             UserId = user.Id,
             CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(7)
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            FamilyId = storedToken.FamilyId,    // ← hereda la familia
+            ReplacedByToken = null              // aún no fue reemplazado
         };
 
-        await _refreshTokenRepository
-            .AddAsync(refreshTokenEntity, cancellationToken);
-
+        await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return new AuthResponse
         {
             AccessToken = newAccessToken,

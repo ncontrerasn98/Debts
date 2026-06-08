@@ -32,8 +32,7 @@ public class LoginHandler: IRequestHandler<LoginCommand, AuthResponse>
 
         if (user is null)
         {
-            throw new NotFoundException(
-                "User not found");
+            throw new NotFoundException("User not found");
         }
         
         if (!_passwordHasher.Verify(command.Password, user.PasswordHash))
@@ -45,10 +44,12 @@ public class LoginHandler: IRequestHandler<LoginCommand, AuthResponse>
         
         var refreshEntity = new Domain.Entities.RefreshToken
         {
+            Id = Guid.NewGuid(),
             Token = refreshToken,
             UserId = user.Id,
             CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(7)
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            FamilyId = Guid.NewGuid()
         };
 
         await _refreshTokenRepository.AddAsync(refreshEntity, CancellationToken.None);

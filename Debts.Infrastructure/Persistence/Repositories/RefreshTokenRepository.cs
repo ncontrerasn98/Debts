@@ -25,4 +25,24 @@ public class RefreshTokenRepository : IRefreshTokenRepository
         return Task.CompletedTask;
     }
     
+    public async Task<IEnumerable<RefreshToken>> GetFamilyAsync(Guid familyId, CancellationToken ct)
+    {
+        return await _context.RefreshTokens
+            .Where(x => x.FamilyId == familyId)
+            .ToListAsync(ct);
+    }
+
+    public async Task RevokeAllFamilyAsync(Guid familyId, CancellationToken ct)
+    {
+        var family = await _context.RefreshTokens
+            .Where(x => x.FamilyId == familyId)
+            .ToListAsync(ct);
+
+        foreach (var token in family)
+        {
+            token.IsCompromised = true;
+            token.RevokedAt ??= DateTime.UtcNow;  // solo si no estaba ya revocado
+        }
+    }
+    
 }

@@ -42,7 +42,7 @@ public class ExceptionMiddleware
         }
         catch (UnauthorizedException ex)
         {
-            _logger.LogError(ex, "nauthorized exception occurred");
+            _logger.LogError(ex, "unauthorized exception occurred");
             
             await HandleException(
                 context,
