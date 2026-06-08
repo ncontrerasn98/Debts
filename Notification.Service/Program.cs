@@ -16,6 +16,7 @@ builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
 builder.Services.AddHostedService<CreditScoreUpdatedConsumer>();
+builder.Services.AddHostedService<DebtCreatedRabbitMqConsumer>();
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(

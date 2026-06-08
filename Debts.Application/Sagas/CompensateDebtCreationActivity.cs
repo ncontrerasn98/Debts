@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.Persistence;
 using Debts.Application.Sagas.CreateDebt;
 using Debts.Application.Sagas.CreateDebt.Messages;
 using Debts.Domain.Entities;
 using MassTransit;
+using Shared.Contracts.Events;
 
 namespace Debts.Application.Sagas;
 
@@ -13,15 +15,17 @@ public class CompensateDebtCreationActivity :
     private readonly IDebtRepository _debtRepository;
     private readonly IAuditService _auditService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOutboxMessagesRepository _outboxMessagesRepository;
 
     public CompensateDebtCreationActivity(
         IDebtRepository debtRepository,
         IAuditService auditService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork, IOutboxMessagesRepository outboxMessagesRepository)
     {
         _debtRepository = debtRepository;
         _auditService = auditService;
         _unitOfWork = unitOfWork;
+        _outboxMessagesRepository = outboxMessagesRepository;
     }
 
     public async Task Execute(
@@ -35,6 +39,42 @@ public class CompensateDebtCreationActivity :
             if (debt is not null)
             {
                 _debtRepository.Remove(debt);
+
+                // Eliminar OutboxMessages pendientes
+                await _outboxMessagesRepository.DeletePendingAsync(
+                    correlationId: context.Saga.DebtId.Value.ToString());
+
+                // Insertar evento de compensación para los mensajes que ya se publicaron
+                var compensatedEvent = new DebtCompensatedEvent
+                {
+                    DebtId = context.Saga.DebtId.Value,
+                    UserId = context.Saga.UserId,
+                    Reason = context.Saga.FailureReason,
+                    CompensatedAt = DateTime.UtcNow
+                };
+
+                var serializedEvent = JsonSerializer.Serialize(compensatedEvent);
+
+                // Topic — para CreditScore.Api y Notification.Service
+                await _outboxMessagesRepository.AddAsync(new OutboxMessage
+                {
+                    Id = Guid.NewGuid(),
+                    Type = nameof(DebtCompensatedEvent),
+                    Payload = serializedEvent,
+                    OccurredOnUtc = DateTime.UtcNow,
+                    CorrelationId = context.Saga.DebtId.Value.ToString()
+                }, CancellationToken.None);
+
+                // Fanout — broadcast a todos los servicios
+                await _outboxMessagesRepository.AddAsync(new OutboxMessage
+                {
+                    Id = Guid.NewGuid(),
+                    Type = $"{nameof(DebtCompensatedEvent)}.Fanout",
+                    Payload = serializedEvent,
+                    OccurredOnUtc = DateTime.UtcNow,
+                    CorrelationId = context.Saga.DebtId.Value.ToString()
+                }, CancellationToken.None);
+
                 await _unitOfWork.SaveChangesAsync();
 
                 await _auditService.LogAsync(

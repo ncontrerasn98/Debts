@@ -25,4 +25,12 @@ public class OutboxMessagesRepository : IOutboxMessagesRepository
         return Task.CompletedTask;
     }
 
+    public async Task DeletePendingAsync(string correlationId, CancellationToken cancellationToken = default)
+    {
+        var pending = await _context.OutboxMessages
+            .Where(x => x.CorrelationId == correlationId && x.ProcessedOnUtc == null)
+            .ToListAsync(cancellationToken);
+
+        _context.OutboxMessages.RemoveRange(pending);
+    }
 }

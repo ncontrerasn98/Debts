@@ -12,6 +12,8 @@ public class CreditHistory
     public int LowNegotiations { get; private set; } // negoció menos del 50% del original
     public DateTime OldestDebtDate { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    private List<CreditHistoryEvent> _events = new();
+    public IReadOnlyCollection<CreditHistoryEvent> Events => _events.AsReadOnly();
 
     public CreditHistory() { }
 
@@ -47,11 +49,18 @@ public class CreditHistory
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void ApplyDebtCreated()
+    public bool ApplyDebtCreated(Guid debtId, decimal amount)
     {
+        // Idempotencia — si ya procesamos este debtId, ignorar
+        if (_events.Any(e => e.DebtId == debtId && e.EventType == CreditHistoryEvent.Types.Created))
+            return false;
+
         TotalDebts++;
         ActiveDebts++;
         UpdatedAt = DateTime.UtcNow;
+
+        _events.Add(new CreditHistoryEvent(Id, debtId, amount, CreditHistoryEvent.Types.Created));
+        return true;
     }
     
     public void ReverseDebtSettled(
@@ -71,5 +80,23 @@ public class CreditHistory
         }
 
         UpdatedAt = DateTime.UtcNow;
+    }
+    
+    public bool RevertDebtCreated(Guid debtId)
+    {
+        var createdEvent = _events
+            .FirstOrDefault(e => e.DebtId == debtId
+                                 && e.EventType == CreditHistoryEvent.Types.Created);
+
+        // Nunca procesamos este DebtCreatedEvent — ignorar
+        if (createdEvent is null)
+            return false;
+
+        TotalDebts--;
+        ActiveDebts--;
+        UpdatedAt = DateTime.UtcNow;
+
+        _events.Add(new CreditHistoryEvent(Id, debtId, createdEvent.Amount, CreditHistoryEvent.Types.Compensated));
+        return true;
     }
 }

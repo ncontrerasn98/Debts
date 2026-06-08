@@ -18,6 +18,7 @@ builder.Services.AddGrpc();
 
 builder.Services.AddHostedService<KafkaTopicInitializer>();
 builder.Services.AddHostedService<DebtSettledConsumer>();
+builder.Services.AddHostedService<DebtCreatedRabbitMqConsumer>();
 
 builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 

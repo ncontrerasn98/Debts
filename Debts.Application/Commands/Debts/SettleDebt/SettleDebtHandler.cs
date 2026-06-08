@@ -72,15 +72,6 @@ public class SettleDebtHandler  : IRequestHandler<SettleDebtCommand, Unit>
             TraceParent =  traceParent
         };
 
-        var debtSettledSendEmailCommand = new SendDebtSettledEmailCommand
-        {
-            MessageId =  Guid.NewGuid(),
-            CorrelationId = debt.Id,
-            DebtId = debt.Id,
-            SettledAt = DateTime.UtcNow,
-            Email = "test-mail@email.com"
-        };
-        
         await _outboxMessagesRepository.AddAsync(outboxEventMessage, cancellationToken);
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.Auth;
 using Debts.Application.Abstractions.CreditScore;
@@ -6,6 +8,7 @@ using Debts.Domain.Entities;
 using Debts.Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
 
 namespace Debts.Application.Commands.Debts.CreateDebt;
 
@@ -18,8 +21,9 @@ public class CreateDebtHandler : IRequestHandler<CreateDebtCommand, Guid>
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAuditService _auditService;
     private readonly ICurrentUserService  _currentUserService;
+    private readonly IOutboxMessagesRepository _outboxMessagesRepository;
 
-    public CreateDebtHandler(IDebtRepository debtRepository, IUserRepository userRepository, ILogger<CreateDebtHandler> logger, IUnitOfWork unitOfWork, ICreditScoreService creditScoreService, IAuditService auditService, ICurrentUserService currentUserService)
+    public CreateDebtHandler(IDebtRepository debtRepository, IUserRepository userRepository, ILogger<CreateDebtHandler> logger, IUnitOfWork unitOfWork, ICreditScoreService creditScoreService, IAuditService auditService, ICurrentUserService currentUserService, IOutboxMessagesRepository outboxMessagesRepository)
     {
         _debtRepository = debtRepository;
         _userRepository = userRepository;
@@ -28,6 +32,7 @@ public class CreateDebtHandler : IRequestHandler<CreateDebtCommand, Guid>
         _creditScoreService = creditScoreService;
         _auditService = auditService;
         _currentUserService = currentUserService;
+        _outboxMessagesRepository = outboxMessagesRepository;
     }
 
     public async Task<Guid> Handle(CreateDebtCommand command, CancellationToken cancellationToken)
@@ -76,6 +81,41 @@ public class CreateDebtHandler : IRequestHandler<CreateDebtCommand, Guid>
         var debt = new Debt(command.Amount, command.UserId);
 
         await _debtRepository.AddAsync(debt);
+        
+        var traceParent = Activity.Current?.Id;
+
+        var debtCreatedEvent = new DebtCreatedEvent
+        {
+            DebtId = debt.Id,
+            UserId = command.UserId,
+            Amount = command.Amount,
+            CreatedAt = debt.CreatedAt,
+            Region = "co"
+        };
+
+        var serializedEvent = JsonSerializer.Serialize(debtCreatedEvent);
+
+        // Mensaje para Topic Exchange
+        await _outboxMessagesRepository.AddAsync(new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            Type = nameof(DebtCreatedEvent),
+            Payload = serializedEvent,
+            OccurredOnUtc = DateTime.UtcNow,
+            CorrelationId = debt.Id.ToString(),
+            TraceParent = traceParent
+        }, cancellationToken);
+
+        // Mensaje para Fanout Exchange — mismo evento, tipo distinto para el switch
+        await _outboxMessagesRepository.AddAsync(new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            Type = $"{nameof(DebtCreatedEvent)}.Fanout",
+            Payload = serializedEvent,
+            OccurredOnUtc = DateTime.UtcNow,
+            CorrelationId = debt.Id.ToString(),
+            TraceParent = traceParent
+        }, cancellationToken);
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         

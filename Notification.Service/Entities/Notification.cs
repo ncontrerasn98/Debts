@@ -27,6 +27,8 @@ public class Notification
     public static class Types
     {
         public const string DebtSettled = "DEBT_SETTLED";
+        public const string DebtCreated = "DEBT_CREATED";          // ← nuevo
+        public const string DebtCompensated = "DEBT_COMPENSATED";  // ← nuevo
         public const string CreditScoreUpdated = "CREDIT_SCORE_UPDATED";
         public const string LowCreditScore = "LOW_CREDIT_SCORE";
     }

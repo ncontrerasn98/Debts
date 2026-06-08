@@ -17,12 +17,15 @@ public class OutboxProcessorJob: BackgroundService
     private readonly ILogger<OutboxProcessorJob> _logger;
     private readonly IEventProducer _eventProducer;
     private static readonly ActivitySource _activitySource = new("OutboxDispatcher");
+    private readonly IRabbitMqPublisher _rabbitMqPublisher;
 
-    public OutboxProcessorJob(IServiceScopeFactory scopeFactory, ILogger<OutboxProcessorJob> logger, IEventProducer eventProducer)
+
+    public OutboxProcessorJob(IServiceScopeFactory scopeFactory, ILogger<OutboxProcessorJob> logger, IEventProducer eventProducer, IRabbitMqPublisher rabbitMqPublisher)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _eventProducer = eventProducer;
+        _rabbitMqPublisher = rabbitMqPublisher;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -103,6 +106,94 @@ public class OutboxProcessorJob: BackgroundService
                                 message.Type);
                         }
 
+                        break;
+                    
+                    case nameof(DebtCreatedEvent):
+                        var debtCreatedTopic = JsonSerializer.Deserialize<DebtCreatedEvent>(message.Payload);
+
+                        ActivityContext debtCreatedContext = default;
+                        if (!string.IsNullOrEmpty(message.TraceParent))
+                            ActivityContext.TryParse(message.TraceParent, null, isRemote: true, out debtCreatedContext);
+
+                        using (var activity = _activitySource.StartActivity(
+                                   "outbox.dispatch.DebtCreatedEvent.Topic",
+                                   ActivityKind.Producer,
+                                   debtCreatedContext))
+                        {
+                            var routingKey = $"debt.created.{debtCreatedTopic!.Region}";
+
+                            await _rabbitMqPublisher.PublishToTopicAsync(
+                                routingKey: routingKey,
+                                message: debtCreatedTopic, cancellationToken: cancellationToken);
+
+                            _logger.LogInformation(
+                                "Outbox message {Type} published to Topic Exchange with routing key {RoutingKey}",
+                                message.Type,
+                                routingKey);
+                        }
+                        break;
+
+                    case $"{nameof(DebtCreatedEvent)}.Fanout":
+                        var debtCreatedFanout = JsonSerializer.Deserialize<DebtCreatedEvent>(message.Payload);
+
+                        ActivityContext debtCreatedFanoutContext = default;
+                        if (!string.IsNullOrEmpty(message.TraceParent))
+                            ActivityContext.TryParse(message.TraceParent, null, isRemote: true, out debtCreatedFanoutContext);
+
+                        using (var activity = _activitySource.StartActivity(
+                                   "outbox.dispatch.DebtCreatedEvent.Fanout",
+                                   ActivityKind.Producer,
+                                   debtCreatedFanoutContext))
+                        {
+                            await _rabbitMqPublisher.PublishToFanoutAsync(message: debtCreatedFanout!, cancellationToken: cancellationToken);
+
+                            _logger.LogInformation(
+                                "Outbox message {Type} published to Fanout Exchange",
+                                message.Type);
+                        }
+                        break;
+                    
+                    case nameof(DebtCompensatedEvent):
+                        var compensatedTopic = JsonSerializer.Deserialize<DebtCompensatedEvent>(message.Payload);
+
+                        ActivityContext compensatedTopicContext = default;
+                        if (!string.IsNullOrEmpty(message.TraceParent))
+                            ActivityContext.TryParse(message.TraceParent, null, isRemote: true, out compensatedTopicContext);
+
+                        using (var activity = _activitySource.StartActivity(
+                                   "outbox.dispatch.DebtCompensatedEvent.Topic",
+                                   ActivityKind.Producer,
+                                   compensatedTopicContext))
+                        {
+                            await _rabbitMqPublisher.PublishToTopicAsync(
+                                routingKey: $"debt.compensated.{compensatedTopic!.UserId}",
+                                message: compensatedTopic);
+
+                            _logger.LogInformation(
+                                "Outbox message {Type} published to Topic Exchange",
+                                message.Type);
+                        }
+                        break;
+
+                    case $"{nameof(DebtCompensatedEvent)}.Fanout":
+                        var compensatedFanout = JsonSerializer.Deserialize<DebtCompensatedEvent>(message.Payload);
+
+                        ActivityContext compensatedFanoutContext = default;
+                        if (!string.IsNullOrEmpty(message.TraceParent))
+                            ActivityContext.TryParse(message.TraceParent, null, isRemote: true, out compensatedFanoutContext);
+
+                        using (var activity = _activitySource.StartActivity(
+                                   "outbox.dispatch.DebtCompensatedEvent.Fanout",
+                                   ActivityKind.Producer,
+                                   compensatedFanoutContext))
+                        {
+                            await _rabbitMqPublisher.PublishToFanoutAsync(
+                                message: compensatedFanout!);
+
+                            _logger.LogInformation(
+                                "Outbox message {Type} published to Fanout Exchange",
+                                message.Type);
+                        }
                         break;
                 }
 

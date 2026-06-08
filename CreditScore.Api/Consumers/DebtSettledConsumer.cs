@@ -93,6 +93,7 @@ public class DebtSettledConsumer : BackgroundService
                         {
                             history = new CreditHistory(debtSettledEvent!.UserId);
                             dbContext.CreditHistories.Add(history);
+                            await dbContext.SaveChangesAsync(stoppingToken);
                         }
 
                         history.ApplyDebtSettled(

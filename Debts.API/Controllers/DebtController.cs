@@ -31,21 +31,6 @@ public class DebtsController : ControllerBase
         _requestClient = requestClient;
     }
 
-    // [Authorize]
-    // [HttpPost]
-    // public async Task<IActionResult> Create(CreateDebtRequest request)
-    // {
-    //     var command = new CreateDebtCommand
-    //     {
-    //         UserId = request.UserId,
-    //         Amount = request.Amount
-    //     };
-    //
-    //     var debtId = await _mediator.Send(command);
-    //
-    //     return Ok(debtId);
-    // }
-    
     [HttpPost]
     [AllowAnonymous]
     [Idempotent]

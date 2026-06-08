@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Debts.Application.Abstractions.Audit;
 using Debts.Application.Abstractions.CreditScore;
 using Debts.Application.Abstractions.Persistence;
@@ -5,6 +7,7 @@ using Debts.Application.Sagas.CreateDebt.Messages;
 using Debts.Domain.Entities;
 using Debts.Domain.Exceptions;
 using MassTransit;
+using Shared.Contracts.Events;
 
 namespace Debts.Application.Sagas.CreateDebt;
 
@@ -15,19 +18,21 @@ public class CreateDebtActivity : IStateMachineActivity<DebtCreationSagaState, C
     private readonly IAuditService _auditService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICreditScoreService _creditScoreService;
+    private readonly IOutboxMessagesRepository _outboxMessagesRepository;
 
     public CreateDebtActivity(
         IDebtRepository debtRepository,
         IUserRepository userRepository,
         IAuditService auditService,
         IUnitOfWork unitOfWork,
-        ICreditScoreService creditScoreService)
+        ICreditScoreService creditScoreService, IOutboxMessagesRepository outboxMessagesRepository)
     {
         _debtRepository = debtRepository;
         _userRepository = userRepository;
         _auditService = auditService;
         _unitOfWork = unitOfWork;
         _creditScoreService = creditScoreService;
+        _outboxMessagesRepository = outboxMessagesRepository;
     }
 
     public async Task Execute(
@@ -77,6 +82,40 @@ public class CreateDebtActivity : IStateMachineActivity<DebtCreationSagaState, C
 
             var debt = new Debt(context.Saga.Amount, context.Saga.UserId);
             await _debtRepository.AddAsync(debt);
+            
+            var debtCreatedEvent = new DebtCreatedEvent
+            {
+                DebtId = debt.Id,
+                UserId = context.Saga.UserId,
+                Amount = context.Saga.Amount,
+                CreatedAt = debt.CreatedAt,
+                Region = "co"
+            };
+
+            var serializedEvent = JsonSerializer.Serialize(debtCreatedEvent);
+
+            // Topic Exchange
+            await _outboxMessagesRepository.AddAsync(new OutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                Type = nameof(DebtCreatedEvent),
+                Payload = serializedEvent,
+                OccurredOnUtc = DateTime.UtcNow,
+                CorrelationId = debt.Id.ToString(),
+                TraceParent = Activity.Current?.Id
+            }, CancellationToken.None);
+
+            // Fanout Exchange
+            await _outboxMessagesRepository.AddAsync(new OutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                Type = $"{nameof(DebtCreatedEvent)}.Fanout",
+                Payload = serializedEvent,
+                OccurredOnUtc = DateTime.UtcNow,
+                CorrelationId = debt.Id.ToString(),
+                TraceParent = Activity.Current?.Id
+            }, CancellationToken.None);
+
             await _unitOfWork.SaveChangesAsync();
             
             context.Saga.DebtId = debt.Id;

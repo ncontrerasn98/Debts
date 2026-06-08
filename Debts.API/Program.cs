@@ -29,6 +29,8 @@ using Debts.Infrastructure.BackgroundJobs;
 using Debts.Infrastructure.CreditScore;
 using Debts.Infrastructure.HealthChecks;
 using Debts.Infrastructure.Logging;
+using Debts.Infrastructure.Messaging.RabbitMq.Publishers;
+using Debts.Infrastructure.Messaging.RabbitMq.Setup;
 using Debts.Infrastructure.Persistence.Audit;
 using Debts.Infrastructure.Persistence.Auth;
 using Debts.Infrastructure.Persistence.Idempotency;
@@ -87,6 +89,8 @@ builder.Services.AddScoped<RevokeRoleHandler>();
 
 builder.Services.AddSingleton<IEventProducer, KafkaProducer>();
 builder.Services.AddScoped<IMessageBus, MessageBus>();
+builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+
 
 builder.Services.AddScoped<KafkaHealthCheck>();
 
@@ -158,6 +162,19 @@ builder.Services.AddMassTransit(x =>
         cfg.ConfigureEndpoints(context);
     });
 });
+
+// IConnection para publisher personalizado
+builder.Services.AddSingleton<IConnection>(sp =>
+{
+    var factory = new ConnectionFactory
+    {
+        HostName = builder.Configuration["RabbitMQ:Host"],
+        UserName = builder.Configuration["RabbitMQ:Username"],
+        Password = builder.Configuration["RabbitMQ:Password"]
+    };
+    return factory.CreateConnectionAsync().GetAwaiter().GetResult();
+});
+
 
 builder.Services.AddGrpcClient<Shared.Contracts.CreditScoreService.CreditScoreServiceClient>(options =>
     {
@@ -427,5 +444,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.MapMetrics();
+
+var connection = app.Services.GetRequiredService<IConnection>();
+await RabbitMqTopologySetup.InitializeAsync(connection);
 
 app.Run();
