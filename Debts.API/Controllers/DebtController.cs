@@ -17,7 +17,7 @@ namespace Debts.API.Controllers;
 
 [ApiController]
 [Route("debts")]
-[EnableRateLimiting("mixed-per-user")]
+[EnableRateLimiting("token-bucket-debts")] 
 public class DebtsController : ControllerBase
 {
     private readonly IMediator _mediator;

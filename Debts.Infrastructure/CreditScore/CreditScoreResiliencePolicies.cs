@@ -2,6 +2,7 @@ using Polly;
 using Polly.Extensions.Http;
 using Polly.CircuitBreaker;
 using Microsoft.Extensions.Logging;
+using Polly.Bulkhead;
 
 namespace Debts.Infrastructure.CreditScore;
 
@@ -51,6 +52,7 @@ public static class CreditScoreResiliencePolicies
         HttpPolicyExtensions
             .HandleTransientHttpError()
             .Or<BrokenCircuitException>()
+            .Or<BulkheadRejectedException>()        
             .FallbackAsync(
                 fallbackValue: new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable),
                 onFallbackAsync: (outcome, _) =>
@@ -60,4 +62,15 @@ public static class CreditScoreResiliencePolicies
                         outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString());
                     return Task.CompletedTask;
                 });
+    
+    public static IAsyncPolicy<HttpResponseMessage> GetBulkheadPolicy(ILogger logger) =>
+        Policy.BulkheadAsync<HttpResponseMessage>(
+            maxParallelization: 5,      // máximo 5 llamadas concurrentes a CreditScore
+            maxQueuingActions: 2,       // cola de 2 esperando
+            onBulkheadRejectedAsync: _ =>
+            {
+                logger.LogWarning(
+                    "CreditScore bulkhead rejected — too many concurrent requests");
+                return Task.CompletedTask;
+            });
 }

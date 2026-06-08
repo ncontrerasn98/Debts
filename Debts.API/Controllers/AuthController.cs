@@ -6,6 +6,7 @@ using Debts.Application.Commands.Auth.RefreshToken;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Debts.API.Controllers;
 
@@ -21,6 +22,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("mixed-per-user")] 
     public async Task<IActionResult> Login(
         LoginRequest request)
     {
@@ -41,6 +43,7 @@ public class AuthController : ControllerBase
     }
     
     [HttpPost("refresh")]
+    [EnableRateLimiting("mixed-per-user")] 
     public async Task<IActionResult> Refresh(
         RefreshTokenCommand command)
     {

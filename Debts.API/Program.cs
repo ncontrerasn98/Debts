@@ -307,6 +307,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
 
+    //Fixed Window para auth (anti-brute force)
     options.AddPolicy("mixed-per-user", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -318,6 +319,22 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 3,
                 QueueLimit = 2,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+            }));
+
+    //Token Bucket para operaciones de deudas
+    options.AddPolicy("token-bucket-debts", httpContext =>
+        RateLimitPartition.GetTokenBucketLimiter(
+            partitionKey: httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = 10,                                    // balde máximo
+                ReplenishmentPeriod = TimeSpan.FromSeconds(5),      // cada 5 segundos
+                TokensPerPeriod = 2,                                // agrega 2 tokens
+                QueueLimit = 0,                                     // sin cola — rechaza inmediato
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
             }));
 });
 
@@ -355,6 +372,7 @@ var loggerFactory = LoggerFactory.Create(b => b.AddSerilog());
 var logger = loggerFactory.CreateLogger<CreditScoreGrpcClient>(); 
 var combinedPolicy = Policy.WrapAsync(
     CreditScoreResiliencePolicies.GetFallbackPolicy(logger),
+    CreditScoreResiliencePolicies.GetBulkheadPolicy(logger),  
     CreditScoreResiliencePolicies.GetCircuitBreakerPolicy(logger),
     CreditScoreResiliencePolicies.GetRetryPolicy(logger),
     CreditScoreResiliencePolicies.GetTimeoutPolicy());
